@@ -1,8 +1,77 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="112" fill="#020617"/>
-  <rect x="28" y="28" width="456" height="456" rx="92" fill="#0f172a" stroke="#10b981" stroke-width="10" stroke-opacity="0.4"/>
-  <path d="M256 96L396 176V336L256 416L116 336V176L256 96Z" fill="#064e3b" stroke="#10b981" stroke-width="16" stroke-linejoin="round"/>
-  <path d="M256 156C206 156 176 196 176 248C176 300 212 344 256 356C300 344 336 300 336 248C336 196 306 156 256 156Z" fill="#10b981"/>
-  <path d="M214 232H298M206 268H306M226 304H286" stroke="#022c22" stroke-width="14" stroke-linecap="round"/>
-  <circle cx="256" cy="194" r="14" fill="#022c22"/>
+  <!-- Background Matching PWA PNG Icons -->
+  <rect width="512" height="512" rx="112" fill="#040b1b"/>
+
+  <!-- Outer Circular Bioconversion Cycle Arrows -->
+  <!-- Top Arc -> Downward Arrowhead on Right -->
+  <path
+    d="M110 226 A148 148 0 0 1 402 238"
+    fill="none"
+    stroke="#10c07f"
+    stroke-width="20"
+    stroke-linecap="butt"
+  />
+  <polygon points="402,276 376,232 428,232" fill="#10c07f"/>
+
+  <!-- Bottom Arc -> Upward Arrowhead on Left -->
+  <path
+    d="M402 286 A148 148 0 0 1 110 274"
+    fill="none"
+    stroke="#10c07f"
+    stroke-width="20"
+    stroke-linecap="butt"
+  />
+  <polygon points="110,236 84,280 136,280" fill="#10c07f"/>
+
+  <!-- Outer Emerald Hexagon Frame -->
+  <polygon
+    points="256,132 362,193 362,315 256,376 150,315 150,193"
+    fill="none"
+    stroke="#10c07f"
+    stroke-width="15"
+    stroke-linejoin="miter"
+  />
+
+  <!-- Inner Solid Emerald Hexagon Core -->
+  <polygon
+    points="256,156 341,205 341,303 256,352 171,303 171,205"
+    fill="#10c07f"
+  />
+
+  <!-- Stylized Black Soldier Fly (Negative Space #040b1b) -->
+  <!-- Antennae -->
+  <path d="M248 202 Q242 190 232 187" fill="none" stroke="#040b1b" stroke-width="5" stroke-linecap="round"/>
+  <path d="M264 202 Q270 190 280 187" fill="none" stroke="#040b1b" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Head & Body Silhouette -->
+  <circle cx="256" cy="209" r="11" fill="#040b1b"/>
+  <path
+    d="M256 220 C273 220 279 258 269 294 C264 310 259 318 256 322 C253 318 248 310 243 294 C233 258 239 220 256 220 Z"
+    fill="#040b1b"
+  />
+
+  <!-- Left Wing Dark Outline + Emerald Wing Cells -->
+  <path
+    d="M244 234 C216 214 182 206 156 206 C158 234 176 254 214 256 C228 257 238 252 244 244 Z"
+    fill="#040b1b"
+  />
+  <path
+    d="M235 236 C214 221 188 214 166 213 C170 231 184 244 214 247 C225 248 232 244 235 236 Z"
+    fill="#10c07f"
+  />
+  <path d="M229 239 Q202 232 176 228" fill="none" stroke="#040b1b" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- Right Wing Dark Outline + Emerald Wing Cells -->
+  <path
+    d="M268 234 C296 214 330 206 356 206 C354 234 336 254 298 256 C284 257 274 252 268 244 Z"
+    fill="#040b1b"
+  />
+  <path
+    d="M277 236 C298 221 324 214 346 213 C342 231 328 244 298 247 C287 248 280 244 277 236 Z"
+    fill="#10c07f"
+  />
+  <path d="M283 239 Q310 232 336 228" fill="none" stroke="#040b1b" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- Warm Amber-Gold Center Core -->
+  <circle cx="256" cy="244" r="18" fill="#e29918" stroke="#040b1b" stroke-width="5"/>
 </svg>

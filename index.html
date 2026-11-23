@@ -125,13 +125,21 @@
       <header
         class="sticky top-0 z-30 flex h-[54px] shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/95 px-4 backdrop-blur-md"
       >
-        <div class="min-w-0 flex-1">
-          <div class="flex items-baseline gap-2">
-            <h1 class="truncate text-base font-bold tracking-tight text-slate-50">Biopond BSF</h1>
-            <span class="text-slate-600" aria-hidden="true">·</span>
-            <p id="header-greeting" class="truncate text-xs font-medium text-emerald-400">
-              Halo, Peternak
-            </p>
+        <div class="flex min-w-0 flex-1 items-center gap-2.5">
+          <img
+            src="/icon.svg"
+            alt="Logo Biopond BSF"
+            referrerPolicy="no-referrer"
+            class="h-7 w-7 shrink-0 rounded-lg border border-emerald-500/30 bg-slate-900"
+          />
+          <div class="min-w-0 flex-1">
+            <div class="flex items-baseline gap-2">
+              <h1 class="truncate text-base font-bold tracking-tight text-slate-50">Biopond BSF</h1>
+              <span class="text-slate-600" aria-hidden="true">·</span>
+              <p id="header-greeting" class="truncate text-xs font-medium text-emerald-400">
+                Halo, Peternak
+              </p>
+            </div>
           </div>
         </div>
 
@@ -3199,12 +3207,23 @@
 
         <div class="flex-1 space-y-3.5 overflow-y-auto px-5 py-4 text-xs leading-relaxed text-slate-300">
           <div class="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-950/25 p-4">
-            <div class="min-w-0">
-              <p class="text-base font-extrabold text-slate-50">Biopond BSF</p>
-              <p class="text-[11px] text-emerald-300">Manajemen Budidaya Maggot · 100% Offline-First PWA</p>
+            <div class="flex min-w-0 items-center gap-3">
+              <img
+                src="/icon.svg"
+                alt="Logo Biopond BSF"
+                referrerPolicy="no-referrer"
+                class="h-11 w-11 shrink-0 rounded-xl border border-emerald-500/35 bg-slate-950"
+              />
+              <div class="min-w-0">
+                <p class="text-base font-extrabold text-slate-50">Biopond BSF</p>
+                <p class="text-[11px] text-emerald-300">Manajemen Budidaya Maggot · 100% Offline-First PWA</p>
+              </div>
             </div>
-            <span class="shrink-0 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 font-mono text-xs font-bold text-emerald-300">
-              v2.7 · DB v7
+            <span
+              id="about-app-version"
+              class="shrink-0 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 font-mono text-xs font-bold text-emerald-300"
+            >
+              v2.7.0
             </span>
           </div>
 
@@ -3237,9 +3256,15 @@
               </div>
               <div class="flex items-center justify-between gap-3 px-3 py-2.5">
                 <span class="shrink-0 text-slate-400">Repo GitHub</span>
-                <span class="rounded-md border border-slate-700 bg-slate-950 px-2 py-0.5 text-[11px] font-medium text-slate-300">
-                  Draft (Segera hadir)
-                </span>
+                <a
+                  href="https://github.com/aiprojek/Biopond-BSF"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1 truncate font-semibold text-slate-200 underline decoration-slate-500/50 underline-offset-2 hover:text-white"
+                >
+                  <span>aiprojek/Biopond-BSF</span>
+                  <i data-lucide="external-link" class="h-3.5 w-3.5 shrink-0"></i>
+                </a>
               </div>
               <div class="flex items-center justify-between gap-3 px-3 py-2.5">
                 <span class="shrink-0 text-slate-400">Donasi</span>
@@ -4286,6 +4311,10 @@
     <script>
       (function () {
         'use strict';
+
+        // Standar Pemversian Aplikasi (Semantic Versioning: MAJOR.MINOR.PATCH)
+        // Setiap rilis baru wajib disinkronkan dengan "version" di package.json dan README.md.
+        const APP_VERSION = '2.7.0';
 
         // =========================================================================
         // 1. DEXIE.JS INDEXEDDB SCHEMA (100% Lokal / Offline-First)
@@ -11461,7 +11490,7 @@
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
-          showToast('File cadangan JSON (v7) berhasil diunduh.');
+          showToast('File cadangan JSON berhasil diunduh.');
         }
 
         async function importDatabaseJSON(file) {
@@ -11861,6 +11890,8 @@
         }
 
         async function openAboutModal() {
+          const versionBadge = document.getElementById('about-app-version');
+          if (versionBadge) versionBadge.textContent = `v${APP_VERSION}`;
           openModal('modal-about');
           refreshIcons();
         }
@@ -11869,7 +11900,7 @@
           const stats = await getAboutRuntimeStats();
           const txt = [
             'Biopond BSF Diagnostics',
-            'App Version: v2.7 (IndexedDB v7)',
+            `App Version: v${APP_VERSION}`,
             `Network: ${stats.network}`,
             `Service Worker: ${stats.swActive}`,
             `Display Mode: ${stats.displayMode}`,
