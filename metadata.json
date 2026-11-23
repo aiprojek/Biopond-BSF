@@ -1,0 +1,6 @@
+{
+  "name": "Biopond BSF",
+  "description": "Aplikasi PWA mobile-first offline untuk manajemen budidaya maggot BSF, kalkulator pakan & FCR, pencatatan panen lokal (IndexedDB), serta diagnosa AI multi-provider.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
