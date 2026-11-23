@@ -23,12 +23,26 @@ function sanitizePairId(raw) {
   return cleaned.length >= 4 ? cleaned : '';
 }
 
+const MAX_PAIR_BYTES = 16 * 1024;
+const MAX_SYNC_BYTES = 20 * 1024 * 1024;
+
+function timingSafeEqualStr(a, b) {
+  const s1 = String(a || '');
+  const s2 = String(b || '');
+  const len = Math.max(s1.length, s2.length);
+  let diff = s1.length ^ s2.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (s1.charCodeAt(i) || 0) ^ (s2.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
 function isAuthorized(request, env) {
-  const expected = env.SYNC_TOKEN;
+  const expected = String(env.SYNC_TOKEN || '').trim();
   if (!expected) return true;
   const auth = request.headers.get('Authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-  return token === expected;
+  return timingSafeEqualStr(token, expected);
 }
 
 export async function onRequestOptions() {
@@ -151,6 +165,12 @@ export async function onRequestPut({ request, env }) {
   if (pairId) {
     try {
       const rawBody = await request.text();
+      if (rawBody.length > MAX_PAIR_BYTES) {
+        return new Response(JSON.stringify({ error: 'Ukuran payload pairing melebihi batas (16 KB).' }), {
+          status: 413,
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        });
+      }
       const parsed = JSON.parse(rawBody);
       if (!parsed || typeof parsed.encrypted !== 'string' || !parsed.iv) {
         return new Response(JSON.stringify({ error: 'Payload pairing tidak valid.' }), {
@@ -159,6 +179,29 @@ export async function onRequestPut({ request, env }) {
         });
       }
       const pairKey = `bsf-pair:${pairId}`;
+
+      // Cegah menimpa kode pairing aktif yang belum kedaluwarsa
+      let existingRaw = null;
+      if (env.BSF_SYNC_KV) {
+        existingRaw = await env.BSF_SYNC_KV.get(pairKey);
+      } else if (env.BSF_SYNC_R2) {
+        const existingObj = await env.BSF_SYNC_R2.get(`${pairKey}.json`);
+        if (existingObj) existingRaw = await existingObj.text();
+      }
+      if (existingRaw) {
+        try {
+          const existingParsed = JSON.parse(existingRaw);
+          if (existingParsed?.expiresAt && Date.now() < Number(existingParsed.expiresAt)) {
+            return new Response(JSON.stringify({ error: 'Kode pairing sedang dipakai. Coba buat ulang.' }), {
+              status: 409,
+              headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+            });
+          }
+        } catch {
+          // Abaikan bila corrupt
+        }
+      }
+
       const payload = JSON.stringify({
         encrypted: parsed.encrypted,
         iv: parsed.iv,
@@ -206,6 +249,12 @@ export async function onRequestPut({ request, env }) {
 
   try {
     const rawBody = await request.text();
+    if (rawBody.length > MAX_SYNC_BYTES) {
+      return new Response(JSON.stringify({ error: 'Ukuran data sinkronisasi melebihi batas 20 MB.' }), {
+        status: 413,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
     const parsed = JSON.parse(rawBody);
     if (!parsed || typeof parsed !== 'object' || !parsed.data) {
       return new Response(JSON.stringify({ error: 'Format payload sync tidak valid.' }), {

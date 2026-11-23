@@ -1867,13 +1867,23 @@
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label for="sync-cf-workspace" class="block text-[11px] font-medium text-slate-300">
-                    ID Kebun / Workspace
-                  </label>
+                  <div class="flex items-center justify-between gap-1">
+                    <label for="sync-cf-workspace" class="block text-[11px] font-medium text-slate-300">
+                      ID Kebun / Workspace
+                    </label>
+                    <button
+                      id="btn-sync-gen-workspace"
+                      type="button"
+                      class="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300 hover:bg-slate-800"
+                      title="Buat ID Kebun acak yang unik"
+                    >
+                      Acak ID
+                    </button>
+                  </div>
                   <input
                     id="sync-cf-workspace"
                     type="text"
-                    placeholder="farm-kandang-01"
+                    placeholder="kebun-7f9k2m8x4q"
                     class="mt-1 min-h-[44px] w-full rounded-xl border border-slate-700 bg-slate-900 px-3 font-mono text-xs text-slate-100 focus:border-emerald-400 focus:outline-none"
                   />
                 </div>
@@ -1890,6 +1900,12 @@
                   />
                 </div>
               </div>
+              <p
+                id="sync-cf-workspace-warning"
+                class="hidden rounded-xl border border-amber-500/35 bg-amber-950/35 px-3 py-2 text-[11px] leading-relaxed text-amber-200"
+              >
+                ID workspace masih standar (<code>farm-utama</code>) tanpa Token Sync. Klik <strong>Acak ID</strong> agar data kebun Anda tidak mudah ditebak pihak lain.
+              </p>
             </div>
 
             <!-- Panel: Dropbox (OAuth2 PKCE + Folder Sync) -->
@@ -2140,10 +2156,10 @@
           <!-- Backup & Restore -->
           <div class="space-y-3 border-t border-slate-800 pt-4">
             <h3 class="text-xs font-bold tracking-wide text-emerald-400">
-              Cadangan Database Lokal (IndexedDB)
+              Cadangan Database Lokal &amp; Enkripsi
             </h3>
             <p class="text-xs text-slate-400">
-              Ekspor seluruh data biopond, log sampah, panen, dan air lindi ke file JSON, atau pulihkan dari cadangan.
+              Ekspor seluruh data ke file cadangan (mendukung enkripsi password AES-256-GCM maupun JSON standar), atau pulihkan dari cadangan.
             </p>
             <div class="grid grid-cols-2 gap-2.5">
               <button
@@ -2151,8 +2167,8 @@
                 type="button"
                 class="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 text-xs font-semibold text-slate-100 transition active:scale-95 hover:bg-slate-800"
               >
-                <i data-lucide="download" class="h-4 w-4 text-emerald-400"></i>
-                <span>Export JSON</span>
+                <i data-lucide="shield-check" class="h-4 w-4 text-emerald-400"></i>
+                <span>Export Backup</span>
               </button>
               <button
                 id="btn-import-json"
@@ -2160,9 +2176,24 @@
                 class="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 text-xs font-semibold text-slate-100 transition active:scale-95 hover:bg-slate-800"
               >
                 <i data-lucide="upload" class="h-4 w-4 text-emerald-400"></i>
-                <span>Import JSON</span>
+                <span>Import Backup</span>
               </button>
-              <input id="input-import-file" type="file" accept=".json,application/json" class="hidden" />
+              <input id="input-import-file" type="file" accept=".json,.bsfbackup,application/json" class="hidden" />
+            </div>
+
+            <!-- Manajemen Ukuran Foto Media -->
+            <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5">
+              <div class="min-w-0">
+                <p class="text-[11px] font-semibold text-slate-200">Penyimpanan Foto Media</p>
+                <p id="settings-photo-stats-label" class="font-mono text-[11px] text-slate-400">0 foto (~0 KB)</p>
+              </div>
+              <button
+                id="btn-prune-old-photos"
+                type="button"
+                class="min-h-[38px] shrink-0 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 text-[11px] font-semibold text-amber-200 transition active:scale-95 hover:bg-amber-500/20"
+              >
+                Hapus Foto &gt;30 Hari
+              </button>
             </div>
           </div>
           </div>
@@ -3223,7 +3254,7 @@
               id="about-app-version"
               class="shrink-0 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 font-mono text-xs font-bold text-emerald-300"
             >
-              v2.7.0
+              v2.8.0
             </span>
           </div>
 
@@ -4298,6 +4329,100 @@
       </div>
     </div>
 
+    <!-- MODAL: ENKRIPSI / DEKRIPSI BACKUP -->
+    <div
+      id="modal-backup-crypto"
+      class="fixed inset-0 z-50 hidden items-end justify-center bg-black/75 backdrop-blur-sm sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="backup-crypto-title"
+    >
+      <div
+        class="animate-sheet-up flex max-h-[90dvh] w-full max-w-[440px] flex-col rounded-t-3xl border border-slate-800 bg-slate-900 shadow-2xl sm:rounded-3xl"
+      >
+        <div class="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-slate-700"></div>
+        <div class="flex items-center justify-between border-b border-slate-800 px-5 py-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="lock" class="h-4 w-4 text-emerald-400"></i>
+            <h2 id="backup-crypto-title" class="text-base font-bold text-slate-50">Ekspor Cadangan Data</h2>
+          </div>
+          <button
+            type="button"
+            data-close-modal="modal-backup-crypto"
+            class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            aria-label="Tutup"
+          >
+            <i data-lucide="x" class="h-5 w-5"></i>
+          </button>
+        </div>
+
+        <form id="form-backup-crypto" class="space-y-3.5 px-5 py-4">
+          <p id="backup-crypto-desc" class="text-xs leading-relaxed text-slate-300">
+            Lindungi file backup dengan enkripsi password <strong>AES-256-GCM</strong> agar data keuangan, operator, dan PIN Pemilik aman saat disimpan di cloud atau dibagikan.
+          </p>
+
+          <div>
+            <label for="backup-crypto-password" class="block text-xs font-semibold text-slate-200">
+              Password Enkripsi Backup
+            </label>
+            <div class="mt-1 flex gap-2">
+              <input
+                id="backup-crypto-password"
+                type="password"
+                autocomplete="off"
+                placeholder="Minimal 4 karakter"
+                class="min-h-[46px] flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3.5 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
+              />
+              <button
+                id="btn-toggle-backup-pass"
+                type="button"
+                class="flex min-h-[46px] min-w-[46px] items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800"
+                aria-label="Tampilkan atau sembunyikan password"
+              >
+                <i data-lucide="eye" class="h-4 w-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <div id="backup-crypto-confirm-wrap">
+            <label for="backup-crypto-confirm" class="block text-xs font-semibold text-slate-200">
+              Ulangi Password
+            </label>
+            <input
+              id="backup-crypto-confirm"
+              type="password"
+              autocomplete="off"
+              placeholder="Ketik ulang password"
+              class="mt-1 min-h-[46px] w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
+            />
+          </div>
+
+          <p id="backup-crypto-note" class="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-[11px] leading-relaxed text-slate-400">
+            Mode terenkripsi menyertakan profil dan hash PIN Pemilik dengan aman. Ekspor JSON standar mengecualikan hash PIN demi privasi.
+          </p>
+
+          <div class="space-y-2 pt-1">
+            <button
+              id="btn-backup-crypto-submit"
+              type="submit"
+              class="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-slate-950 transition active:scale-[0.99] hover:bg-emerald-400"
+            >
+              <i data-lucide="shield-check" class="h-4 w-4"></i>
+              <span id="backup-crypto-submit-text">Enkripsi &amp; Unduh Backup</span>
+            </button>
+            <button
+              id="btn-backup-export-plain"
+              type="button"
+              class="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-4 text-xs font-semibold text-slate-200 transition active:scale-[0.99] hover:bg-slate-800"
+            >
+              <i data-lucide="download" class="h-3.5 w-3.5 text-slate-400"></i>
+              <span>Unduh JSON Standar (Tanpa Password)</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- TOAST FEEDBACK -->
     <div
       id="toast-container"
@@ -4314,7 +4439,7 @@
 
         // Standar Pemversian Aplikasi (Semantic Versioning: MAJOR.MINOR.PATCH)
         // Setiap rilis baru wajib disinkronkan dengan "version" di package.json dan README.md.
-        const APP_VERSION = '2.7.0';
+        const APP_VERSION = '2.8.0';
 
         // =========================================================================
         // 1. DEXIE.JS INDEXEDDB SCHEMA (100% Lokal / Offline-First)
@@ -4483,12 +4608,14 @@
           activeOperator: 'bsf_active_operator',
           activeRole: 'bsf_active_role',
           ownerPinHash: 'bsf_owner_pin_hash',
+          ownerPinUpdatedAt: 'bsf_owner_pin_updated_at',
           ownerRecoveryQuestion: 'bsf_owner_recovery_question',
           ownerRecoveryAnswerHash: 'bsf_owner_recovery_answer_hash',
           pinLockoutMap: 'bsf_pin_lockout_map',
           notifConfig: 'bsf_pwa_notif_config',
           lastNotifDate: 'bsf_pwa_notif_last_date',
           telemetrySynced: 'bsf_telemetry_synced',
+          defaultWorkspaceId: 'bsf_default_workspace_id',
         };
 
         const SECURITY_QUESTIONS = [
@@ -5121,7 +5248,7 @@
         }
 
         async function openOperatorSwitchModal() {
-          const operators = await db.operators.orderBy('id').toArray();
+          const operators = (await db.operators.orderBy('id').toArray()).filter(isActiveRecord);
           const listEl = document.getElementById('operator-switch-list');
           const currentOp = getActiveOperatorName();
           const currentRole = getActiveRole();
@@ -5215,8 +5342,9 @@
 
               const opId = Number(opIdStr);
               let op = opId ? await db.operators.get(opId) : null;
+              if (op && !isActiveRecord(op)) op = null;
               if (!op) {
-                op = await db.operators.where('name').equals(name).first();
+                op = await db.operators.where('name').equals(name).filter(isActiveRecord).first();
               }
               closeModal('modal-operator-switch');
 
@@ -5323,12 +5451,177 @@
         }
 
         function escapeHTML(str) {
+          if (window.BSFCore?.escapeHTML) return window.BSFCore.escapeHTML(str);
           return String(str || '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+        }
+
+        function sanitizeImageDataUrl(val) {
+          if (window.BSFCore?.sanitizeImageDataUrl) return window.BSFCore.sanitizeImageDataUrl(val);
+          const s = String(val || '').trim();
+          if (!s) return '';
+          return /^data:image\/(webp|png|jpeg|jpg);base64,[A-Za-z0-9+/=]+$/.test(s) ? s : '';
+        }
+
+        function sanitizeSyncUrl(rawUrl, allowRelative = false) {
+          if (window.BSFCore?.sanitizeSyncUrl) return window.BSFCore.sanitizeSyncUrl(rawUrl, allowRelative);
+          const s = String(rawUrl || '').trim();
+          if (!s) return '';
+          if (allowRelative && s.startsWith('/') && !s.startsWith('//')) return s;
+          try {
+            const parsed = new URL(s);
+            if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return s;
+          } catch {}
+          return '';
+        }
+
+        function generateRandomWorkspaceId(prefix = 'kebun') {
+          if (window.BSFCore?.generateRandomWorkspaceId) return window.BSFCore.generateRandomWorkspaceId(prefix);
+          const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+          const bytes = new Uint8Array(10);
+          if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+          let suffix = '';
+          for (let i = 0; i < bytes.length; i++) suffix += alphabet[bytes[i] % alphabet.length];
+          return `${prefix}-${suffix}`;
+        }
+
+        function getOrCreateDefaultWorkspaceId() {
+          let ws = (localStorage.getItem(STORAGE_KEYS.defaultWorkspaceId) || '').trim();
+          if (!ws) {
+            ws = generateRandomWorkspaceId('kebun');
+            localStorage.setItem(STORAGE_KEYS.defaultWorkspaceId, ws);
+          }
+          return ws;
+        }
+
+        function isActiveRecord(record) {
+          return !record?.deletedAt;
+        }
+
+        function getRecordMutationTimestamp(record) {
+          if (!record) return 0;
+          return Math.max(Number(record.updatedAt) || 0, Number(record.deletedAt) || 0, Number(record.createdAt) || 0);
+        }
+
+        function resolvePinSyncState(localState, remoteState) {
+          if (window.BSFCore?.resolvePinSyncState) return window.BSFCore.resolvePinSyncState(localState, remoteState);
+          const localTs = Number(localState.ownerPinUpdatedAt) || 0;
+          const remoteTs = Number(remoteState.ownerPinUpdatedAt) || 0;
+          const remoteHash = typeof remoteState.ownerPinHash === 'string' ? remoteState.ownerPinHash : undefined;
+          if (remoteTs > localTs && remoteHash !== undefined) {
+            return {
+              ownerPinHash: remoteHash,
+              ownerRecoveryQuestion:
+                remoteHash === '' ? '' : String(remoteState.ownerRecoveryQuestion ?? localState.ownerRecoveryQuestion ?? ''),
+              ownerRecoveryAnswerHash:
+                remoteHash === '' ? '' : String(remoteState.ownerRecoveryAnswerHash ?? localState.ownerRecoveryAnswerHash ?? ''),
+              ownerPinUpdatedAt: remoteTs,
+              changed: true,
+            };
+          }
+          if (!localState.ownerPinHash && remoteHash) {
+            return {
+              ownerPinHash: remoteHash,
+              ownerRecoveryQuestion: String(remoteState.ownerRecoveryQuestion || localState.ownerRecoveryQuestion || ''),
+              ownerRecoveryAnswerHash: String(remoteState.ownerRecoveryAnswerHash || localState.ownerRecoveryAnswerHash || ''),
+              ownerPinUpdatedAt: remoteTs || Date.now(),
+              changed: true,
+            };
+          }
+          return { ...localState, changed: false };
+        }
+
+        function isEncryptedBackupEnvelope(obj) {
+          if (window.BSFCore?.isEncryptedBackupEnvelope) return window.BSFCore.isEncryptedBackupEnvelope(obj);
+          return Boolean(obj && typeof obj === 'object' && obj.format === 'bsf-encrypted-backup-v1' && obj.ciphertext && obj.iv && obj.salt);
+        }
+
+        async function encryptBackupPayload(snapshot, password) {
+          if (window.BSFCore?.encryptBackupPayload) return window.BSFCore.encryptBackupPayload(snapshot, password);
+          const cleanPass = String(password || '');
+          if (cleanPass.length < 4) throw new Error('Password enkripsi backup minimal 4 karakter.');
+          if (!window.crypto?.subtle) throw new Error('Browser tidak mendukung enkripsi Web Crypto.');
+          const salt = crypto.getRandomValues(new Uint8Array(16));
+          const iv = crypto.getRandomValues(new Uint8Array(12));
+          const keyMat = await crypto.subtle.importKey('raw', new TextEncoder().encode(cleanPass), 'PBKDF2', false, ['deriveKey']);
+          const key = await crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' },
+            keyMat,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt']
+          );
+          const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(snapshot)));
+          return {
+            app: 'Biopond BSF',
+            format: 'bsf-encrypted-backup-v1',
+            kdf: 'PBKDF2-SHA256',
+            iterations: 150000,
+            cipher: 'AES-256-GCM',
+            salt: base64UrlEncode(salt),
+            iv: base64UrlEncode(iv),
+            ciphertext: base64UrlEncode(new Uint8Array(cipher)),
+            exportedAt: snapshot.exportedAt || new Date().toISOString(),
+          };
+        }
+
+        async function decryptBackupPayload(envelope, password) {
+          if (window.BSFCore?.decryptBackupPayload) return window.BSFCore.decryptBackupPayload(envelope, password);
+          const cleanPass = String(password || '');
+          if (!cleanPass) throw new Error('Masukkan password untuk membuka file backup terenkripsi.');
+          const b64ToBytes = (str) => {
+            let b64 = String(str || '').replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+            const bin = atob(b64);
+            const arr = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            return arr;
+          };
+          const iterations = Math.max(10000, Math.min(1000000, Number(envelope.iterations) || 150000));
+          const keyMat = await crypto.subtle.importKey('raw', new TextEncoder().encode(cleanPass), 'PBKDF2', false, ['deriveKey']);
+          const key = await crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt: b64ToBytes(envelope.salt), iterations, hash: 'SHA-256' },
+            keyMat,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['decrypt']
+          );
+          try {
+            const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(envelope.iv) }, key, b64ToBytes(envelope.ciphertext));
+            return JSON.parse(new TextDecoder().decode(plain));
+          } catch {
+            throw new Error('Password backup salah atau file cadangan telah rusak.');
+          }
+        }
+
+        function trimSnapshotPhotosForLimit(snapshot, maxBytes = 18 * 1024 * 1024) {
+          if (window.BSFCore?.trimSnapshotPhotosForLimit) return window.BSFCore.trimSnapshotPhotosForLimit(snapshot, maxBytes);
+          const encoded = new TextEncoder().encode(JSON.stringify(snapshot)).length;
+          if (encoded <= maxBytes || !Array.isArray(snapshot?.data?.daily_logs)) {
+            return { snapshot, trimmedCount: 0, byteSize: encoded };
+          }
+          const cloned = JSON.parse(JSON.stringify(snapshot));
+          const logs = cloned.data.daily_logs || [];
+          const withPhotos = logs
+            .map((l, idx) => ({ idx, ts: Number(l.updatedAt || l.createdAt || 0), hasPhoto: Boolean(l.photoDataUrl) }))
+            .filter((x) => x.hasPhoto)
+            .sort((a, b) => a.ts - b.ts);
+          let trimmedCount = 0;
+          let curBytes = encoded;
+          for (const item of withPhotos) {
+            if (curBytes <= maxBytes) break;
+            if (logs[item.idx]?.photoDataUrl) {
+              logs[item.idx].photoDataUrl = '';
+              logs[item.idx].photoTrimmedForSync = true;
+              trimmedCount++;
+              curBytes = new TextEncoder().encode(JSON.stringify(cloned)).length;
+            }
+          }
+          return { snapshot: cloned, trimmedCount, byteSize: curBytes };
         }
 
         function formatDateShort(isoDate) {
@@ -5922,7 +6215,7 @@
             provider: SYNC_PROVIDER_LABELS[stored.provider] ? stored.provider : 'none',
             autoSync: Boolean(stored.autoSync),
             cfEndpoint: stored.cfEndpoint || '/api/sync',
-            cfWorkspace: stored.cfWorkspace || 'farm-utama',
+            cfWorkspace: (stored.cfWorkspace || '').trim() || getOrCreateDefaultWorkspaceId(),
             cfToken: stored.cfToken || '',
             dbxToken: stored.dbxToken || '',
             dbxPath: stored.dbxPath || '/Biopond-BSF',
@@ -5996,7 +6289,9 @@
         }
 
         async function recalculateFeedStocksFromLedger() {
-          const [stocks, ledger] = await Promise.all([db.feed_stocks.toArray(), db.feed_ledger.toArray()]);
+          const [stocksRaw, ledgerRaw] = await Promise.all([db.feed_stocks.toArray(), db.feed_ledger.toArray()]);
+          const stocks = stocksRaw.filter(isActiveRecord);
+          const ledger = ledgerRaw.filter(isActiveRecord);
           if (!stocks.length) return;
 
           const byStockUid = new Map();
@@ -6310,10 +6605,34 @@
             farmName: localStorage.getItem(STORAGE_KEYS.farmName) || '',
             farmCity: localStorage.getItem(STORAGE_KEYS.farmCity) || '',
             ownerPinHash: getOwnerPinHash(),
+            ownerPinUpdatedAt: Number(localStorage.getItem(STORAGE_KEYS.ownerPinUpdatedAt) || 0),
             ownerRecoveryQuestion: localStorage.getItem(STORAGE_KEYS.ownerRecoveryQuestion) || '',
             ownerRecoveryAnswerHash: localStorage.getItem(STORAGE_KEYS.ownerRecoveryAnswerHash) || '',
             data: { containers, bioponds, harvests, daily_logs, cages, egg_harvests, transactions, env_logs, feed_stocks, feed_ledger, operators },
           };
+        }
+
+        async function pruneExpiredTombstones(maxAgeDays = 90) {
+          const cutoff = Date.now() - maxAgeDays * 86400000;
+          const tables = [
+            db.containers,
+            db.bioponds,
+            db.harvests,
+            db.daily_logs,
+            db.cages,
+            db.egg_harvests,
+            db.transactions,
+            db.env_logs,
+            db.feed_stocks,
+            db.feed_ledger,
+            db.operators,
+          ];
+          for (const tbl of tables) {
+            const stale = await tbl.filter((r) => Boolean(r?.deletedAt) && Number(r.deletedAt) < cutoff).primaryKeys();
+            if (stale.length) {
+              await tbl.bulkDelete(stale).catch(() => {});
+            }
+          }
         }
 
         async function mergeRemoteSnapshot(remotePayload) {
@@ -6338,14 +6657,30 @@
               const existing = byUid.get(item.syncUid);
               if (!existing) {
                 delete item.id;
+                if (item.deletedAt) item.photoDataUrl = '';
+                delete item.photoTrimmedForSync;
                 const newId = await table.add(item);
                 byUid.set(item.syncUid, { ...item, id: newId });
                 changes++;
-              } else if ((item.updatedAt || 0) > (existing.updatedAt || existing.createdAt || 0)) {
-                const updated = { ...existing, ...item, id: existing.id };
-                await table.put(updated);
-                byUid.set(item.syncUid, updated);
-                changes++;
+              } else {
+                const remoteTs = getRecordMutationTimestamp(item);
+                const localTs = getRecordMutationTimestamp(existing);
+                if (remoteTs > localTs) {
+                  const updated = { ...existing, ...item, id: existing.id };
+                  if (item.deletedAt) {
+                    updated.deletedAt = item.deletedAt;
+                    updated.photoDataUrl = '';
+                  } else {
+                    delete updated.deletedAt;
+                    if (item.photoTrimmedForSync && !item.photoDataUrl && existing.photoDataUrl) {
+                      updated.photoDataUrl = existing.photoDataUrl;
+                    }
+                  }
+                  delete updated.photoTrimmedForSync;
+                  await table.put(updated);
+                  byUid.set(item.syncUid, updated);
+                  changes++;
+                }
               }
             }
             return changes;
@@ -6367,6 +6702,7 @@
           const stockUidToLocalId = new Map(freshStocks.map((f) => [f.syncUid, f.id]));
 
           totalChanges += await mergeCollection(db.daily_logs, remote.daily_logs || [], (l) => {
+            if (l.photoDataUrl) l.photoDataUrl = sanitizeImageDataUrl(l.photoDataUrl);
             if (l.biopondSyncUid && pondUidToLocalId.has(l.biopondSyncUid)) {
               l.biopondId = pondUidToLocalId.get(l.biopondSyncUid);
             }
@@ -6400,6 +6736,7 @@
           });
           await ensureSyncUids();
           await recalculateFeedStocksFromLedger();
+          await pruneExpiredTombstones(90);
 
           if (typeof remotePayload?.farmName === 'string' && remotePayload.farmName && !localStorage.getItem(STORAGE_KEYS.farmName)) {
             localStorage.setItem(STORAGE_KEYS.farmName, remotePayload.farmName);
@@ -6407,14 +6744,30 @@
           if (typeof remotePayload?.farmCity === 'string' && remotePayload.farmCity && !localStorage.getItem(STORAGE_KEYS.farmCity)) {
             localStorage.setItem(STORAGE_KEYS.farmCity, remotePayload.farmCity);
           }
-          if (typeof remotePayload?.ownerPinHash === 'string' && remotePayload.ownerPinHash && !getOwnerPinHash()) {
-            localStorage.setItem(STORAGE_KEYS.ownerPinHash, remotePayload.ownerPinHash);
-          }
-          if (typeof remotePayload?.ownerRecoveryQuestion === 'string' && remotePayload.ownerRecoveryQuestion && !localStorage.getItem(STORAGE_KEYS.ownerRecoveryQuestion)) {
-            localStorage.setItem(STORAGE_KEYS.ownerRecoveryQuestion, remotePayload.ownerRecoveryQuestion);
-          }
-          if (typeof remotePayload?.ownerRecoveryAnswerHash === 'string' && remotePayload.ownerRecoveryAnswerHash && !localStorage.getItem(STORAGE_KEYS.ownerRecoveryAnswerHash)) {
-            localStorage.setItem(STORAGE_KEYS.ownerRecoveryAnswerHash, remotePayload.ownerRecoveryAnswerHash);
+
+          const pinRes = resolvePinSyncState(
+            {
+              ownerPinHash: getOwnerPinHash(),
+              ownerRecoveryQuestion: localStorage.getItem(STORAGE_KEYS.ownerRecoveryQuestion) || '',
+              ownerRecoveryAnswerHash: localStorage.getItem(STORAGE_KEYS.ownerRecoveryAnswerHash) || '',
+              ownerPinUpdatedAt: Number(localStorage.getItem(STORAGE_KEYS.ownerPinUpdatedAt) || 0),
+            },
+            {
+              ownerPinHash: remotePayload?.ownerPinHash,
+              ownerRecoveryQuestion: remotePayload?.ownerRecoveryQuestion,
+              ownerRecoveryAnswerHash: remotePayload?.ownerRecoveryAnswerHash,
+              ownerPinUpdatedAt: remotePayload?.ownerPinUpdatedAt,
+            }
+          );
+          if (pinRes.changed) {
+            if (pinRes.ownerPinHash) localStorage.setItem(STORAGE_KEYS.ownerPinHash, pinRes.ownerPinHash);
+            else localStorage.removeItem(STORAGE_KEYS.ownerPinHash);
+            if (pinRes.ownerRecoveryQuestion) localStorage.setItem(STORAGE_KEYS.ownerRecoveryQuestion, pinRes.ownerRecoveryQuestion);
+            else localStorage.removeItem(STORAGE_KEYS.ownerRecoveryQuestion);
+            if (pinRes.ownerRecoveryAnswerHash) localStorage.setItem(STORAGE_KEYS.ownerRecoveryAnswerHash, pinRes.ownerRecoveryAnswerHash);
+            else localStorage.removeItem(STORAGE_KEYS.ownerRecoveryAnswerHash);
+            localStorage.setItem(STORAGE_KEYS.ownerPinUpdatedAt, String(pinRes.ownerPinUpdatedAt));
+            applyRoleAccessUI();
           }
 
           return totalChanges;
@@ -6422,8 +6775,9 @@
 
         // --- Provider 1: Cloudflare Pages / Workers KV / R2 ---
         async function cfSyncPull(cfg) {
-          const base = (cfg.cfEndpoint || '/api/sync').trim().replace(/\/$/, '');
-          const ws = encodeURIComponent((cfg.cfWorkspace || 'farm-utama').trim());
+          const base = sanitizeSyncUrl(cfg.cfEndpoint || '/api/sync', true).replace(/\/$/, '');
+          if (!base) throw new Error('Endpoint Cloudflare Sync tidak valid.');
+          const ws = encodeURIComponent((cfg.cfWorkspace || getOrCreateDefaultWorkspaceId()).trim());
           const headers = {};
           if (cfg.cfToken) headers['Authorization'] = `Bearer ${cfg.cfToken.trim()}`;
           const res = await fetch(`${base}?workspace=${ws}`, { method: 'GET', headers, cache: 'no-store' });
@@ -6438,14 +6792,21 @@
         }
 
         async function cfSyncPush(cfg, snapshot) {
-          const base = (cfg.cfEndpoint || '/api/sync').trim().replace(/\/$/, '');
-          const ws = encodeURIComponent((cfg.cfWorkspace || 'farm-utama').trim());
+          const base = sanitizeSyncUrl(cfg.cfEndpoint || '/api/sync', true).replace(/\/$/, '');
+          if (!base) throw new Error('Endpoint Cloudflare Sync tidak valid.');
+          const ws = encodeURIComponent((cfg.cfWorkspace || getOrCreateDefaultWorkspaceId()).trim());
+          const trimmed = trimSnapshotPhotosForLimit(snapshot, 18 * 1024 * 1024);
+          if (trimmed.trimmedCount > 0) {
+            showToast(
+              `${trimmed.trimmedCount} foto lama tidak disertakan di cloud sync agar ukuran tetap <20 MB (foto tetap aman di HP ini).`
+            );
+          }
           const headers = { 'Content-Type': 'application/json' };
           if (cfg.cfToken) headers['Authorization'] = `Bearer ${cfg.cfToken.trim()}`;
           const res = await fetch(`${base}?workspace=${ws}`, {
             method: 'PUT',
             headers,
-            body: JSON.stringify(snapshot),
+            body: JSON.stringify(trimmed.snapshot),
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
@@ -6866,8 +7227,9 @@
         }
 
         async function wdSyncPull(cfg) {
-          if (!cfg.wdUrl) throw new Error('Masukkan URL file WebDAV.');
-          const res = await fetch(cfg.wdUrl.trim(), {
+          const safeUrl = sanitizeSyncUrl(cfg.wdUrl, false);
+          if (!safeUrl) throw new Error('URL file WebDAV harus diawali https:// atau http://.');
+          const res = await fetch(safeUrl, {
             method: 'GET',
             headers: getWebDAVHeaders(cfg),
             cache: 'no-store',
@@ -6878,8 +7240,9 @@
         }
 
         async function wdSyncPush(cfg, snapshot) {
-          if (!cfg.wdUrl) throw new Error('Masukkan URL file WebDAV.');
-          const res = await fetch(cfg.wdUrl.trim(), {
+          const safeUrl = sanitizeSyncUrl(cfg.wdUrl, false);
+          if (!safeUrl) throw new Error('URL file WebDAV harus diawali https:// atau http://.');
+          const res = await fetch(safeUrl, {
             method: 'PUT',
             headers: getWebDAVHeaders(cfg, { 'Content-Type': 'application/json; charset=utf-8' }),
             body: JSON.stringify(snapshot, null, 2),
@@ -7059,6 +7422,9 @@
         }
 
         async function createDevicePairing() {
+          if (isWorkerLocked()) {
+            return requireOwnerAccess(() => createDevicePairing());
+          }
           const cfg = readSyncConfigFromInputs();
           if (cfg.provider === 'none') {
             setSyncStatusBox('Aktifkan & atur layanan Cloud Sync terlebih dahulu.', true);
@@ -7080,7 +7446,7 @@
           }
 
           if (targetRole === 'worker' && assignedOperator && assignedOperator !== 'Pekerja Kandang') {
-            const existingOp = await db.operators.where('name').equals(assignedOperator).first();
+            const existingOp = await db.operators.where('name').equals(assignedOperator).filter(isActiveRecord).first();
             if (!existingOp) {
               await db.operators.add({
                 syncUid: makeSyncUid(),
@@ -7101,6 +7467,7 @@
             pairingRole: targetRole,
             assignedOperator,
             ownerPinHash: getOwnerPinHash(),
+            ownerPinUpdatedAt: Number(localStorage.getItem(STORAGE_KEYS.ownerPinUpdatedAt) || 0),
             ownerRecoveryQuestion: localStorage.getItem(STORAGE_KEYS.ownerRecoveryQuestion) || '',
             ownerRecoveryAnswerHash: localStorage.getItem(STORAGE_KEYS.ownerRecoveryAnswerHash) || '',
           };
@@ -7148,13 +7515,15 @@
           // Coba simpan kode pendek 8 karakter terenkripsi ke relay /api/sync jika online
           if (navigator.onLine && window.crypto?.subtle) {
             try {
-              const pin = String(Math.floor(1000 + Math.random() * 9000));
+              const randBytes = new Uint8Array(8);
+              crypto.getRandomValues(randBytes);
+              const pin = String(1000 + ((randBytes[0] << 8) | randBytes[1]) % 9000);
               const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
               let pairId = '';
-              for (let i = 0; i < 4; i++) pairId += chars[Math.floor(Math.random() * chars.length)];
+              for (let i = 0; i < 4; i++) pairId += chars[randBytes[2 + i] % chars.length];
               const enc = await encryptPairingPayload(jsonStr, pin, pairId);
-              const base = (cfg.cfEndpoint || '/api/sync').trim().replace(/\/$/, '') || '/api/sync';
-              const res = await fetch(`${base}?pair=${encodeURIComponent(pairId)}`, {
+              const safeBase = sanitizeSyncUrl(cfg.cfEndpoint || '/api/sync', true).replace(/\/$/, '') || '/api/sync';
+              const res = await fetch(`${safeBase}?pair=${encodeURIComponent(pairId)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(enc),
@@ -7179,26 +7548,47 @@
           if (!parsed || !parsed.syncConfig || !parsed.syncConfig.provider) {
             throw new Error('Data pairing tidak valid.');
           }
-          saveSyncConfig({ ...parsed.syncConfig, autoSync: true });
+          const sc = { ...parsed.syncConfig };
+          if (sc.provider === 'webdav' && !sanitizeSyncUrl(sc.wdUrl, false)) {
+            throw new Error('URL WebDAV pada token pairing tidak valid.');
+          }
+          if (sc.cfEndpoint && !sanitizeSyncUrl(sc.cfEndpoint, true)) {
+            throw new Error('Endpoint Cloudflare pada token pairing tidak valid.');
+          }
+          saveSyncConfig({ ...sc, autoSync: true });
           if (parsed.farmName && !localStorage.getItem(STORAGE_KEYS.farmName)) {
             localStorage.setItem(STORAGE_KEYS.farmName, parsed.farmName);
           }
           if (parsed.farmCity && !localStorage.getItem(STORAGE_KEYS.farmCity)) {
             localStorage.setItem(STORAGE_KEYS.farmCity, parsed.farmCity);
           }
-          if (parsed.ownerPinHash) {
-            localStorage.setItem(STORAGE_KEYS.ownerPinHash, parsed.ownerPinHash);
-          }
-          if (parsed.ownerRecoveryQuestion && !localStorage.getItem(STORAGE_KEYS.ownerRecoveryQuestion)) {
-            localStorage.setItem(STORAGE_KEYS.ownerRecoveryQuestion, parsed.ownerRecoveryQuestion);
-          }
-          if (parsed.ownerRecoveryAnswerHash && !localStorage.getItem(STORAGE_KEYS.ownerRecoveryAnswerHash)) {
-            localStorage.setItem(STORAGE_KEYS.ownerRecoveryAnswerHash, parsed.ownerRecoveryAnswerHash);
+          const pinRes = resolvePinSyncState(
+            {
+              ownerPinHash: getOwnerPinHash(),
+              ownerRecoveryQuestion: localStorage.getItem(STORAGE_KEYS.ownerRecoveryQuestion) || '',
+              ownerRecoveryAnswerHash: localStorage.getItem(STORAGE_KEYS.ownerRecoveryAnswerHash) || '',
+              ownerPinUpdatedAt: Number(localStorage.getItem(STORAGE_KEYS.ownerPinUpdatedAt) || 0),
+            },
+            {
+              ownerPinHash: parsed.ownerPinHash,
+              ownerRecoveryQuestion: parsed.ownerRecoveryQuestion,
+              ownerRecoveryAnswerHash: parsed.ownerRecoveryAnswerHash,
+              ownerPinUpdatedAt: parsed.ownerPinUpdatedAt,
+            }
+          );
+          if (pinRes.changed) {
+            if (pinRes.ownerPinHash) localStorage.setItem(STORAGE_KEYS.ownerPinHash, pinRes.ownerPinHash);
+            else localStorage.removeItem(STORAGE_KEYS.ownerPinHash);
+            if (pinRes.ownerRecoveryQuestion) localStorage.setItem(STORAGE_KEYS.ownerRecoveryQuestion, pinRes.ownerRecoveryQuestion);
+            else localStorage.removeItem(STORAGE_KEYS.ownerRecoveryQuestion);
+            if (pinRes.ownerRecoveryAnswerHash) localStorage.setItem(STORAGE_KEYS.ownerRecoveryAnswerHash, pinRes.ownerRecoveryAnswerHash);
+            else localStorage.removeItem(STORAGE_KEYS.ownerRecoveryAnswerHash);
+            localStorage.setItem(STORAGE_KEYS.ownerPinUpdatedAt, String(pinRes.ownerPinUpdatedAt));
           }
           if (parsed.pairingRole === 'worker') {
             const opName = parsed.assignedOperator || 'Pekerja Kandang';
             setActiveOperatorAndRole(opName, 'worker');
-            const exists = await db.operators.where('name').equals(opName).first();
+            const exists = await db.operators.where('name').equals(opName).filter(isActiveRecord).first();
             if (!exists && opName !== 'Pekerja Kandang') {
               await db.operators.add({
                 syncUid: makeSyncUid(),
@@ -7245,7 +7635,8 @@
               }
               const [, pin, pairId] = shortMatch;
               setSyncStatusBox(`Mengambil konfigurasi pairing ${pin}-${pairId}...`);
-              const endpoint = (document.getElementById('sync-cf-endpoint')?.value || '/api/sync').trim().replace(/\/$/, '') || '/api/sync';
+              const rawEp = (document.getElementById('sync-cf-endpoint')?.value || '/api/sync').trim().replace(/\/$/, '') || '/api/sync';
+              const endpoint = sanitizeSyncUrl(rawEp, true) || '/api/sync';
               const res = await fetch(`${endpoint}?pair=${encodeURIComponent(pairId)}`, { cache: 'no-store' });
               const blob = await res.json().catch(() => ({}));
               if (!res.ok) {
@@ -7308,6 +7699,12 @@
           }
           if (id === 'modal-owner-pin') {
             stopPinLockoutTimer();
+          }
+          if (id === 'modal-settings') {
+            lastGeneratedPairingToken = '';
+            const qrPreview = document.getElementById('pairing-qr-preview');
+            if (qrPreview) qrPreview.innerHTML = '';
+            document.getElementById('pairing-output-box')?.classList.add('hidden');
           }
           const modal = document.getElementById(id);
           modal.classList.add('hidden');
@@ -7525,20 +7922,43 @@
         // 9. DATA RENDERING (DASHBOARD, BIOPOND/ZONA, INSEKTARIUM, KEUANGAN)
         // =========================================================================
         async function refreshAllData() {
-          const [containers, bioponds, logs, harvests, cages, eggHarvests, transactions, envLogs, feedStocks, feedLedger, operators] =
-            await Promise.all([
-              db.containers.orderBy('code').toArray(),
-              db.bioponds.orderBy('id').reverse().toArray(),
-              db.daily_logs.orderBy('date').reverse().toArray(),
-              db.harvests.orderBy('date').reverse().toArray(),
-              db.cages.orderBy('id').reverse().toArray(),
-              db.egg_harvests.orderBy('date').reverse().toArray(),
-              db.transactions.orderBy('date').reverse().toArray(),
-              db.env_logs.orderBy('createdAt').reverse().toArray(),
-              db.feed_stocks.orderBy('id').reverse().toArray(),
-              db.feed_ledger.orderBy('createdAt').reverse().toArray(),
-              db.operators.orderBy('id').toArray(),
-            ]);
+          const [
+            containersRaw,
+            biopondsRaw,
+            logsRaw,
+            harvestsRaw,
+            cagesRaw,
+            eggHarvestsRaw,
+            transactionsRaw,
+            envLogsRaw,
+            feedStocksRaw,
+            feedLedgerRaw,
+            operatorsRaw,
+          ] = await Promise.all([
+            db.containers.orderBy('code').toArray(),
+            db.bioponds.orderBy('id').reverse().toArray(),
+            db.daily_logs.orderBy('date').reverse().toArray(),
+            db.harvests.orderBy('date').reverse().toArray(),
+            db.cages.orderBy('id').reverse().toArray(),
+            db.egg_harvests.orderBy('date').reverse().toArray(),
+            db.transactions.orderBy('date').reverse().toArray(),
+            db.env_logs.orderBy('createdAt').reverse().toArray(),
+            db.feed_stocks.orderBy('id').reverse().toArray(),
+            db.feed_ledger.orderBy('createdAt').reverse().toArray(),
+            db.operators.orderBy('id').toArray(),
+          ]);
+
+          const containers = containersRaw.filter(isActiveRecord);
+          const bioponds = biopondsRaw.filter(isActiveRecord);
+          const logs = logsRaw.filter(isActiveRecord);
+          const harvests = harvestsRaw.filter(isActiveRecord);
+          const cages = cagesRaw.filter(isActiveRecord);
+          const eggHarvests = eggHarvestsRaw.filter(isActiveRecord);
+          const transactions = transactionsRaw.filter(isActiveRecord);
+          const envLogs = envLogsRaw.filter(isActiveRecord);
+          const feedStocks = feedStocksRaw.filter(isActiveRecord);
+          const feedLedger = feedLedgerRaw.filter(isActiveRecord);
+          const operators = operatorsRaw.filter(isActiveRecord);
 
           cachedAppData = {
             containers,
@@ -8513,14 +8933,15 @@
             btn.addEventListener('click', () => {
               const id = Number(btn.getAttribute('data-delete-cage'));
               requireOwnerAccess(async () => {
+                const nowTs = Date.now();
                 await db.transaction('rw', db.cages, db.egg_harvests, db.env_logs, async () => {
-                  await db.cages.delete(id);
-                  await db.egg_harvests.where('cageId').equals(id).delete();
+                  await db.cages.update(id, { deletedAt: nowTs, updatedAt: nowTs });
+                  await db.egg_harvests.where('cageId').equals(id).modify({ deletedAt: nowTs, updatedAt: nowTs });
                   await db.env_logs
                     .where('targetId')
                     .equals(id)
                     .filter((el) => el.targetType === 'cage')
-                    .delete();
+                    .modify({ deletedAt: nowTs, updatedAt: nowTs });
                 });
                 showToast('Kandang & riwayat telur dihapus.');
                 scheduleAutoSync();
@@ -8606,9 +9027,10 @@
               btn.addEventListener('click', () => {
                 const id = Number(btn.getAttribute('data-delete-feed'));
                 requireOwnerAccess(async () => {
+                  const nowTs = Date.now();
                   await db.transaction('rw', db.feed_stocks, db.feed_ledger, async () => {
-                    await db.feed_stocks.delete(id);
-                    await db.feed_ledger.where('feedStockId').equals(id).delete();
+                    await db.feed_stocks.update(id, { deletedAt: nowTs, updatedAt: nowTs });
+                    await db.feed_ledger.where('feedStockId').equals(id).modify({ deletedAt: nowTs, updatedAt: nowTs });
                   });
                   showToast('Item stok pakan & mutasinya dihapus.');
                   scheduleAutoSync();
@@ -8905,7 +9327,8 @@
             btn.addEventListener('click', () => {
               const id = Number(btn.getAttribute('data-delete-tx'));
               requireOwnerAccess(async () => {
-                await db.transactions.delete(id);
+                const nowTs = Date.now();
+                await db.transactions.update(id, { deletedAt: nowTs, updatedAt: nowTs });
                 showToast('Transaksi dihapus.');
                 scheduleAutoSync();
                 await refreshAllData();
@@ -8917,16 +9340,17 @@
         async function openPhotoPreviewModal(logId) {
           const log =
             cachedAppData?.logs?.find((l) => l.id === logId) || (await db.daily_logs.get(Number(logId)));
-          if (!log || !log.photoDataUrl) {
-            showToast('Foto log tidak ditemukan.', 'error');
+          const safePhotoUrl = sanitizeImageDataUrl(log?.photoDataUrl);
+          if (!log || !safePhotoUrl) {
+            showToast('Foto log tidak ditemukan atau format tidak valid.', 'error');
             return;
           }
-          activePreviewPhotoDataUrl = log.photoDataUrl;
+          activePreviewPhotoDataUrl = safePhotoUrl;
           document.getElementById('photo-preview-title').textContent = log.biopondName || 'Dokumentasi Biopond';
           document.getElementById('photo-preview-meta').textContent = `${formatDateShort(log.date)} · ${Number(
             log.feedKg || 0
           ).toFixed(1)} kg · Oleh: ${log.operatorName || 'Pemilik'}`;
-          document.getElementById('photo-preview-img').src = log.photoDataUrl;
+          document.getElementById('photo-preview-img').src = safePhotoUrl;
           document.getElementById('photo-preview-caption').textContent = `${
             log.feedType || 'Sampah Organik'
           } · Kondisi Media: ${log.moisture || 'Ideal'}`;
@@ -9388,7 +9812,8 @@
               }
 
               let op = id ? await db.operators.get(id) : null;
-              if (!op) op = await db.operators.where('name').equals(name).first();
+              if (op && !isActiveRecord(op)) op = null;
+              if (!op) op = await db.operators.where('name').equals(name).filter(isActiveRecord).first();
               if (!op) {
                 setActiveOperatorAndRole(name, role);
                 showToast(`Aktif sebagai ${name}.`);
@@ -9507,7 +9932,8 @@
             btn.addEventListener('click', () => {
               const id = Number(btn.getAttribute('data-delete-op'));
               requireOwnerAccess(async () => {
-                await db.operators.delete(id);
+                const nowTs = Date.now();
+                await db.operators.update(id, { deletedAt: nowTs, updatedAt: nowTs, active: false });
                 showToast('Operator dihapus dari tim.');
                 scheduleAutoSync();
                 await refreshAllData();
@@ -9651,7 +10077,7 @@
           document.getElementById('biopond-eggs').value = '5';
           applyBiopondSystemUI('Ember Susun', true);
 
-          const containers = await db.containers.orderBy('code').toArray();
+          const containers = (await db.containers.orderBy('code').toArray()).filter(isActiveRecord);
           const containerSel = document.getElementById('biopond-container-select');
           if (containerSel) {
             containerSel.innerHTML =
@@ -10330,11 +10756,12 @@
             return;
           }
 
-          const [allPondsRaw, allContainers] = await Promise.all([
+          const [allPondsRaw, allContainersRaw] = await Promise.all([
             db.bioponds.orderBy('id').reverse().toArray(),
             db.containers.orderBy('code').toArray(),
           ]);
-          const allPonds = allPondsRaw;
+          const allPonds = allPondsRaw.filter(isActiveRecord);
+          const allContainers = allContainersRaw.filter(isActiveRecord);
           let matched = null;
           let matchedContainer = null;
           let redirectNote = '';
@@ -10572,15 +10999,16 @@
           const id = pendingDeletePondId;
           pendingDeletePondId = null;
           const pond = await db.bioponds.get(id);
+          const nowTs = Date.now();
           await db.transaction('rw', db.bioponds, db.daily_logs, db.harvests, db.env_logs, async () => {
-            await db.bioponds.delete(id);
-            await db.daily_logs.where('biopondId').equals(id).delete();
-            await db.harvests.where('biopondId').equals(id).delete();
+            await db.bioponds.update(id, { deletedAt: nowTs, updatedAt: nowTs });
+            await db.daily_logs.where('biopondId').equals(id).modify({ deletedAt: nowTs, updatedAt: nowTs, photoDataUrl: '' });
+            await db.harvests.where('biopondId').equals(id).modify({ deletedAt: nowTs, updatedAt: nowTs });
             await db.env_logs
               .where('targetId')
               .equals(id)
               .filter((el) => el.targetType !== 'cage')
-              .delete();
+              .modify({ deletedAt: nowTs, updatedAt: nowTs });
           });
           closeModal('modal-confirm-delete');
           showToast(`Biopond "${pond?.name || ''}" berhasil dihapus.`);
@@ -10589,7 +11017,7 @@
         }
 
         async function openLogModal(preselectPondId = null) {
-          const totalCount = await db.bioponds.count();
+          const totalCount = await db.bioponds.filter(isActiveRecord).count();
           if (totalCount === 0) {
             showToast('Tambahkan unit biopond terlebih dahulu.', 'error');
             openBiopondModal();
@@ -10612,7 +11040,7 @@
 
           const stockSel = document.getElementById('log-feed-stock-select');
           if (stockSel) {
-            const stocks = await db.feed_stocks.toArray();
+            const stocks = (await db.feed_stocks.toArray()).filter(isActiveRecord);
             stockSel.innerHTML =
               `<option value="">-- Input manual / tidak potong gudang --</option>` +
               stocks
@@ -10738,7 +11166,7 @@
         }
 
         async function openHarvestModal(preselectPondId = null) {
-          const totalCount = await db.bioponds.count();
+          const totalCount = await db.bioponds.filter(isActiveRecord).count();
           if (totalCount === 0) {
             showToast('Tambahkan unit biopond terlebih dahulu.', 'error');
             openBiopondModal();
@@ -11241,11 +11669,11 @@
               const age = calcDayAge(pond.startDate);
               const phaseInfo = getAutoPhase(pond);
               const [recentLogs, recentEnv] = await Promise.all([
-                db.daily_logs.where('biopondId').equals(pond.id).reverse().limit(3).toArray(),
+                db.daily_logs.where('biopondId').equals(pond.id).filter(isActiveRecord).reverse().limit(3).toArray(),
                 db.env_logs
                   .where('targetId')
                   .equals(pond.id)
-                  .filter((el) => el.targetType !== 'cage')
+                  .filter((el) => el.targetType !== 'cage' && isActiveRecord(el))
                   .reverse()
                   .limit(1)
                   .toArray(),
@@ -11269,7 +11697,11 @@
             }
           }
 
-          const latestCageEnvs = await db.env_logs.filter((el) => el.targetType === 'cage').reverse().limit(2).toArray();
+          const latestCageEnvs = await db.env_logs
+            .filter((el) => el.targetType === 'cage' && isActiveRecord(el))
+            .reverse()
+            .limit(2)
+            .toArray();
           if (latestCageEnvs.length) {
             pondContext += `\nData suhu insektarium lalat terbaru: ${latestCageEnvs
               .map(
@@ -11370,13 +11802,22 @@
           }
         }
 
+        function updateCloudflareWorkspaceWarning() {
+          const warnEl = document.getElementById('sync-cf-workspace-warning');
+          const wsVal = (document.getElementById('sync-cf-workspace')?.value || '').trim().toLowerCase();
+          const tokVal = (document.getElementById('sync-cf-token')?.value || '').trim();
+          if (warnEl) {
+            warnEl.classList.toggle('hidden', !(wsVal === 'farm-utama' && !tokVal));
+          }
+        }
+
         function readSyncConfigFromInputs() {
           const prev = getSyncConfig();
           return {
             provider: document.getElementById('setting-sync-provider').value || 'none',
             autoSync: Boolean(document.getElementById('setting-sync-auto').checked),
             cfEndpoint: document.getElementById('sync-cf-endpoint').value.trim() || '/api/sync',
-            cfWorkspace: document.getElementById('sync-cf-workspace').value.trim() || 'farm-utama',
+            cfWorkspace: document.getElementById('sync-cf-workspace').value.trim() || getOrCreateDefaultWorkspaceId(),
             cfToken: document.getElementById('sync-cf-token').value.trim(),
             dbxToken: document.getElementById('sync-dbx-token').value.trim(),
             dbxPath: document.getElementById('sync-dbx-path').value.trim() || '/Biopond-BSF',
@@ -11388,6 +11829,47 @@
             wdUser: document.getElementById('sync-wd-user').value.trim(),
             wdPass: document.getElementById('sync-wd-pass').value,
           };
+        }
+
+        async function renderSettingsPhotoStats() {
+          const labelEl = document.getElementById('settings-photo-stats-label');
+          if (!labelEl) return;
+          const logs = (cachedAppData?.logs || (await db.daily_logs.toArray())).filter(isActiveRecord);
+          let count = 0;
+          let bytes = 0;
+          for (const l of logs) {
+            if (l.photoDataUrl) {
+              count++;
+              bytes += Math.round((l.photoDataUrl.length * 3) / 4);
+            }
+          }
+          const kb = Math.round(bytes / 1024);
+          const sizeStr = kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb} KB`;
+          labelEl.textContent = `${count} foto (${sizeStr})`;
+        }
+
+        async function pruneOldLogPhotos(daysOld = 30) {
+          if (isWorkerLocked()) {
+            return requireOwnerAccess(() => pruneOldLogPhotos(daysOld));
+          }
+          const cutoffDate = new Date(Date.now() - daysOld * 86400000).toISOString().split('T')[0];
+          const nowTs = Date.now();
+          let cleared = 0;
+          await db.daily_logs
+            .filter((l) => isActiveRecord(l) && Boolean(l.photoDataUrl) && String(l.date || '') < cutoffDate)
+            .modify((l) => {
+              l.photoDataUrl = '';
+              l.updatedAt = nowTs;
+              cleared++;
+            });
+          if (cleared === 0) {
+            showToast(`Tidak ada foto log yang berumur lebih dari ${daysOld} hari.`);
+            return;
+          }
+          showToast(`${cleared} foto lama (>30 hari) dibersihkan untuk menghemat ruang.`);
+          scheduleAutoSync();
+          await refreshAllData();
+          await renderSettingsPhotoStats();
         }
 
         function loadSettingsIntoUI(overrideProvider = null) {
@@ -11422,6 +11904,7 @@
           document.getElementById('sync-wd-user').value = syncCfg.wdUser;
           document.getElementById('sync-wd-pass').value = syncCfg.wdPass;
           renderSyncProviderPanels(syncCfg.provider);
+          updateCloudflareWorkspaceWarning();
           setSyncStatusBox('');
         }
 
@@ -11430,6 +11913,7 @@
           renderSettingsGCalSection();
           renderSettingsNotifUI();
           renderSettingsPWASection();
+          renderSettingsPhotoStats();
           applyRoleAccessUI();
           const pairRole = document.getElementById('pairing-target-role')?.value || 'owner';
           document.getElementById('pairing-operator-wrap')?.classList.toggle('hidden', pairRole !== 'worker');
@@ -11437,6 +11921,10 @@
         }
 
         function saveSettingsFromUI(silent = false) {
+          if (isWorkerLocked()) {
+            if (!silent) showToast('Pengaturan hanya dapat diubah dalam Mode Pemilik.', 'error');
+            return;
+          }
           const farmName = document.getElementById('setting-farm-name').value.trim();
           const farmCity = document.getElementById('setting-farm-city').value.trim();
           const provider = document.getElementById('setting-ai-provider').value;
@@ -11477,104 +11965,191 @@
           }
         }
 
-        async function exportDatabaseJSON() {
-          const payload = await buildSyncSnapshot();
-          payload.exportedAt = payload.syncedAt;
+        let backupCryptoMode = 'export';
+        let pendingEncryptedEnvelope = null;
 
-          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        function openBackupCryptoModal(mode = 'export', envelope = null) {
+          backupCryptoMode = mode;
+          pendingEncryptedEnvelope = envelope;
+          const titleEl = document.getElementById('backup-crypto-title');
+          const descEl = document.getElementById('backup-crypto-desc');
+          const noteEl = document.getElementById('backup-crypto-note');
+          const passEl = document.getElementById('backup-crypto-password');
+          const confirmWrap = document.getElementById('backup-crypto-confirm-wrap');
+          const confirmEl = document.getElementById('backup-crypto-confirm');
+          const submitTextEl = document.getElementById('backup-crypto-submit-text');
+          const plainBtn = document.getElementById('btn-backup-export-plain');
+
+          if (passEl) {
+            passEl.value = '';
+            passEl.type = 'password';
+          }
+          if (confirmEl) confirmEl.value = '';
+
+          if (mode === 'import') {
+            if (titleEl) titleEl.textContent = 'Buka Backup Terenkripsi';
+            if (descEl) {
+              descEl.textContent =
+                'File ini dilindungi enkripsi AES-256-GCM. Masukkan password backup Anda untuk memulihkan data.';
+            }
+            confirmWrap?.classList.add('hidden');
+            plainBtn?.classList.add('hidden');
+            if (noteEl) {
+              noteEl.textContent = 'Dekripsi dilakukan 100% lokal di browser Anda tanpa mengirim password ke server.';
+            }
+            if (submitTextEl) submitTextEl.textContent = 'Buka & Pulihkan Data';
+          } else {
+            if (titleEl) titleEl.textContent = 'Ekspor Cadangan Data';
+            if (descEl) {
+              descEl.innerHTML =
+                'Lindungi file backup dengan enkripsi password <strong>AES-256-GCM</strong> agar data keuangan, operator, dan PIN Pemilik aman saat disimpan di cloud atau dibagikan.';
+            }
+            confirmWrap?.classList.remove('hidden');
+            plainBtn?.classList.remove('hidden');
+            if (noteEl) {
+              noteEl.textContent =
+                'Mode terenkripsi menyertakan profil dan hash PIN Pemilik dengan aman. Ekspor JSON standar mengecualikan hash PIN demi privasi.';
+            }
+            if (submitTextEl) submitTextEl.textContent = 'Enkripsi & Unduh Backup';
+          }
+          openModal('modal-backup-crypto');
+          refreshIcons();
+          setTimeout(() => passEl?.focus(), 60);
+        }
+
+        function triggerDownloadJson(obj, filename) {
+          const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `biopond-bsf-backup-${todayISO()}.json`;
+          a.download = filename;
           document.body.appendChild(a);
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
-          showToast('File cadangan JSON berhasil diunduh.');
+        }
+
+        async function buildCleanActiveBackupSnapshot(includeSecrets = true) {
+          const snap = await buildSyncSnapshot();
+          snap.exportedAt = snap.syncedAt;
+          const activeData = {};
+          Object.entries(snap.data || {}).forEach(([k, arr]) => {
+            activeData[k] = Array.isArray(arr) ? arr.filter(isActiveRecord) : [];
+          });
+          snap.data = activeData;
+          if (!includeSecrets) {
+            delete snap.ownerPinHash;
+            delete snap.ownerPinUpdatedAt;
+            delete snap.ownerRecoveryQuestion;
+            delete snap.ownerRecoveryAnswerHash;
+          }
+          return snap;
+        }
+
+        async function exportDatabaseJSON() {
+          if (isWorkerLocked()) {
+            return requireOwnerAccess(() => exportDatabaseJSON());
+          }
+          openBackupCryptoModal('export');
+        }
+
+        async function applyRestoredBackupObject(parsed) {
+          const data = parsed?.data || parsed;
+          if (!data || !Array.isArray(data.bioponds) || !Array.isArray(data.harvests) || !Array.isArray(data.daily_logs)) {
+            throw new Error('Format JSON tidak cocok dengan skema Biopond BSF.');
+          }
+          data.daily_logs = data.daily_logs.map((l) => ({
+            ...l,
+            photoDataUrl: sanitizeImageDataUrl(l?.photoDataUrl),
+          }));
+
+          await db.transaction(
+            'rw',
+            db.containers,
+            db.bioponds,
+            db.harvests,
+            db.daily_logs,
+            db.cages,
+            db.egg_harvests,
+            db.transactions,
+            db.env_logs,
+            db.feed_stocks,
+            db.feed_ledger,
+            db.operators,
+            async () => {
+              await db.containers.clear();
+              await db.bioponds.clear();
+              await db.harvests.clear();
+              await db.daily_logs.clear();
+              await db.cages.clear();
+              await db.egg_harvests.clear();
+              await db.transactions.clear();
+              await db.env_logs.clear();
+              await db.feed_stocks.clear();
+              await db.feed_ledger.clear();
+              await db.operators.clear();
+              if (Array.isArray(data.containers) && data.containers.length) await db.containers.bulkPut(data.containers);
+              if (data.bioponds.length) await db.bioponds.bulkPut(data.bioponds);
+              if (data.harvests.length) await db.harvests.bulkPut(data.harvests);
+              if (data.daily_logs.length) await db.daily_logs.bulkPut(data.daily_logs);
+              if (Array.isArray(data.cages) && data.cages.length) await db.cages.bulkPut(data.cages);
+              if (Array.isArray(data.egg_harvests) && data.egg_harvests.length)
+                await db.egg_harvests.bulkPut(data.egg_harvests);
+              if (Array.isArray(data.transactions) && data.transactions.length)
+                await db.transactions.bulkPut(data.transactions);
+              if (Array.isArray(data.env_logs) && data.env_logs.length) await db.env_logs.bulkPut(data.env_logs);
+              if (Array.isArray(data.feed_stocks) && data.feed_stocks.length)
+                await db.feed_stocks.bulkPut(data.feed_stocks);
+              if (Array.isArray(data.feed_ledger) && data.feed_ledger.length)
+                await db.feed_ledger.bulkPut(data.feed_ledger);
+              if (Array.isArray(data.operators) && data.operators.length) await db.operators.bulkPut(data.operators);
+            }
+          );
+          await ensureSyncUids();
+          await recalculateFeedStocksFromLedger();
+
+          if (typeof parsed.farmName === 'string' && parsed.farmName.trim()) {
+            localStorage.setItem(STORAGE_KEYS.farmName, parsed.farmName.trim());
+          }
+          if (typeof parsed.farmCity === 'string' && parsed.farmCity.trim()) {
+            localStorage.setItem(STORAGE_KEYS.farmCity, parsed.farmCity.trim());
+          }
+          if (typeof parsed.ownerPinHash === 'string' && parsed.ownerPinHash) {
+            localStorage.setItem(STORAGE_KEYS.ownerPinHash, parsed.ownerPinHash);
+            localStorage.setItem(STORAGE_KEYS.ownerPinUpdatedAt, String(parsed.ownerPinUpdatedAt || Date.now()));
+          }
+          if (typeof parsed.ownerRecoveryQuestion === 'string' && parsed.ownerRecoveryQuestion) {
+            localStorage.setItem(STORAGE_KEYS.ownerRecoveryQuestion, parsed.ownerRecoveryQuestion);
+          }
+          if (typeof parsed.ownerRecoveryAnswerHash === 'string' && parsed.ownerRecoveryAnswerHash) {
+            localStorage.setItem(STORAGE_KEYS.ownerRecoveryAnswerHash, parsed.ownerRecoveryAnswerHash);
+          }
+          syncHeaderAndAILabels();
+          loadSettingsIntoUI();
+
+          await refreshAllData();
+          await renderSettingsPhotoStats();
+          showToast(
+            `Restore selesai: ${data.bioponds.length} biopond, ${data.daily_logs.length} log, ${data.harvests.length} panen.`
+          );
         }
 
         async function importDatabaseJSON(file) {
           if (!file) return;
+          if (isWorkerLocked()) {
+            showToast('Restore backup hanya diizinkan dalam Mode Pemilik.', 'error');
+            return;
+          }
           try {
             const text = await file.text();
             const parsed = JSON.parse(text);
-            const data = parsed.data || parsed;
-            if (!Array.isArray(data.bioponds) || !Array.isArray(data.harvests) || !Array.isArray(data.daily_logs)) {
-              throw new Error('Format JSON tidak cocok dengan skema Biopond BSF.');
+            if (isEncryptedBackupEnvelope(parsed)) {
+              openBackupCryptoModal('import', parsed);
+              return;
             }
-
-            await db.transaction(
-              'rw',
-              db.containers,
-              db.bioponds,
-              db.harvests,
-              db.daily_logs,
-              db.cages,
-              db.egg_harvests,
-              db.transactions,
-              db.env_logs,
-              db.feed_stocks,
-              db.feed_ledger,
-              db.operators,
-              async () => {
-                await db.containers.clear();
-                await db.bioponds.clear();
-                await db.harvests.clear();
-                await db.daily_logs.clear();
-                await db.cages.clear();
-                await db.egg_harvests.clear();
-                await db.transactions.clear();
-                await db.env_logs.clear();
-                await db.feed_stocks.clear();
-                await db.feed_ledger.clear();
-                await db.operators.clear();
-                if (Array.isArray(data.containers) && data.containers.length)
-                  await db.containers.bulkPut(data.containers);
-                if (data.bioponds.length) await db.bioponds.bulkPut(data.bioponds);
-                if (data.harvests.length) await db.harvests.bulkPut(data.harvests);
-                if (data.daily_logs.length) await db.daily_logs.bulkPut(data.daily_logs);
-                if (Array.isArray(data.cages) && data.cages.length) await db.cages.bulkPut(data.cages);
-                if (Array.isArray(data.egg_harvests) && data.egg_harvests.length)
-                  await db.egg_harvests.bulkPut(data.egg_harvests);
-                if (Array.isArray(data.transactions) && data.transactions.length)
-                  await db.transactions.bulkPut(data.transactions);
-                if (Array.isArray(data.env_logs) && data.env_logs.length)
-                  await db.env_logs.bulkPut(data.env_logs);
-                if (Array.isArray(data.feed_stocks) && data.feed_stocks.length)
-                  await db.feed_stocks.bulkPut(data.feed_stocks);
-                if (Array.isArray(data.feed_ledger) && data.feed_ledger.length)
-                  await db.feed_ledger.bulkPut(data.feed_ledger);
-                if (Array.isArray(data.operators) && data.operators.length)
-                  await db.operators.bulkPut(data.operators);
-              }
-            );
-            await ensureSyncUids();
-            await recalculateFeedStocksFromLedger();
-
-            if (typeof parsed.farmName === 'string' && parsed.farmName.trim()) {
-              localStorage.setItem(STORAGE_KEYS.farmName, parsed.farmName.trim());
-            }
-            if (typeof parsed.farmCity === 'string' && parsed.farmCity.trim()) {
-              localStorage.setItem(STORAGE_KEYS.farmCity, parsed.farmCity.trim());
-            }
-            if (typeof parsed.ownerPinHash === 'string' && parsed.ownerPinHash) {
-              localStorage.setItem(STORAGE_KEYS.ownerPinHash, parsed.ownerPinHash);
-            }
-            if (typeof parsed.ownerRecoveryQuestion === 'string' && parsed.ownerRecoveryQuestion) {
-              localStorage.setItem(STORAGE_KEYS.ownerRecoveryQuestion, parsed.ownerRecoveryQuestion);
-            }
-            if (typeof parsed.ownerRecoveryAnswerHash === 'string' && parsed.ownerRecoveryAnswerHash) {
-              localStorage.setItem(STORAGE_KEYS.ownerRecoveryAnswerHash, parsed.ownerRecoveryAnswerHash);
-            }
-            syncHeaderAndAILabels();
-            loadSettingsIntoUI();
-
-            await refreshAllData();
-            showToast(
-              `Restore selesai: ${data.bioponds.length} biopond, ${data.daily_logs.length} log, ${data.harvests.length} panen.`
-            );
+            await applyRestoredBackupObject(parsed);
           } catch (err) {
-            showToast(err.message || 'Gagal membaca file JSON.', 'error');
+            showToast(err.message || 'Gagal membaca file backup.', 'error');
           }
         }
 
@@ -12090,14 +12665,15 @@
             setAIPhotoUI(null);
           });
           document.getElementById('btn-ai-use-latest-photo')?.addEventListener('click', () => {
-            const latestWithPhoto = cachedAppData?.logs?.find((l) => l.photoDataUrl);
-            if (!latestWithPhoto) {
+            const latestWithPhoto = cachedAppData?.logs?.find((l) => sanitizeImageDataUrl(l.photoDataUrl));
+            const safeUrl = sanitizeImageDataUrl(latestWithPhoto?.photoDataUrl);
+            if (!latestWithPhoto || !safeUrl) {
               showToast('Belum ada foto pada log harian.', 'error');
               return;
             }
-            const kb = Math.max(1, Math.round((latestWithPhoto.photoDataUrl.length * 3) / 4 / 1024));
+            const kb = Math.max(1, Math.round((safeUrl.length * 3) / 4 / 1024));
             setAIPhotoUI({
-              dataUrl: latestWithPhoto.photoDataUrl,
+              dataUrl: safeUrl,
               label: `Dari log ${latestWithPhoto.biopondName || 'Biopond'} (~${kb} KB)`,
             });
             showToast('Foto log terakhir dimuat ke Diagnosa AI.');
@@ -12292,6 +12868,7 @@
 
               if (pendingPinAction.target === 'owner') {
                 localStorage.setItem(STORAGE_KEYS.ownerPinHash, pinHash);
+                localStorage.setItem(STORAGE_KEYS.ownerPinUpdatedAt, String(Date.now()));
                 localStorage.setItem(STORAGE_KEYS.ownerRecoveryQuestion, question);
                 localStorage.setItem(STORAGE_KEYS.ownerRecoveryAnswerHash, answerHash);
                 showToast('PIN & Pertanyaan Pemulihan Pemilik berhasil disimpan.');
@@ -12404,6 +12981,7 @@
           document.getElementById('btn-remove-owner-pin')?.addEventListener('click', async () => {
             if (pendingPinAction?.target === 'owner') {
               localStorage.removeItem(STORAGE_KEYS.ownerPinHash);
+              localStorage.setItem(STORAGE_KEYS.ownerPinUpdatedAt, String(Date.now()));
               localStorage.removeItem(STORAGE_KEYS.ownerRecoveryQuestion);
               localStorage.removeItem(STORAGE_KEYS.ownerRecoveryAnswerHash);
               localStorage.setItem(STORAGE_KEYS.activeRole, 'owner');
@@ -12428,7 +13006,7 @@
           const addOperatorRecord = async (name, role = 'worker') => {
             const clean = String(name || '').trim();
             if (!clean) return;
-            const exists = await db.operators.where('name').equals(clean).first();
+            const exists = await db.operators.where('name').equals(clean).filter(isActiveRecord).first();
             if (exists) {
               showToast(`Operator "${clean}" sudah terdaftar.`, 'error');
               return;
@@ -12499,6 +13077,7 @@
             'modal-owner-pin',
             'modal-recovery-pin',
             'modal-photo-preview',
+            'modal-backup-crypto',
           ].forEach((id) => {
             const el = document.getElementById(id);
             el?.addEventListener('click', (e) => {
@@ -12977,7 +13556,9 @@
             }
           );
           document.getElementById('btn-dried-pull-hpp')?.addEventListener('click', async () => {
-            const [txs, harvests] = await Promise.all([db.transactions.toArray(), db.harvests.toArray()]);
+            const [txsRaw, harvestsRaw] = await Promise.all([db.transactions.toArray(), db.harvests.toArray()]);
+            const txs = txsRaw.filter(isActiveRecord);
+            const harvests = harvestsRaw.filter(isActiveRecord);
             const totalExp = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
             const totalMag = harvests.reduce((s, h) => s + (Number(h.maggotKg) || 0), 0);
             if (totalMag <= 0 || totalExp <= 0) {
@@ -13108,7 +13689,19 @@
             }
           });
 
-          // Export / Import JSON
+          document.getElementById('btn-sync-gen-workspace')?.addEventListener('click', () => {
+            const nextId = generateRandomWorkspaceId('kebun');
+            const wsInput = document.getElementById('sync-cf-workspace');
+            if (wsInput) wsInput.value = nextId;
+            localStorage.setItem(STORAGE_KEYS.defaultWorkspaceId, nextId);
+            updateCloudflareWorkspaceWarning();
+            showToast(`ID Kebun unik dibuat: ${nextId}`);
+          });
+          document.getElementById('sync-cf-workspace')?.addEventListener('input', updateCloudflareWorkspaceWarning);
+          document.getElementById('sync-cf-token')?.addEventListener('input', updateCloudflareWorkspaceWarning);
+          document.getElementById('btn-prune-old-photos')?.addEventListener('click', () => pruneOldLogPhotos(30));
+
+          // Export / Import Backup & Enkripsi Modal
           document.getElementById('btn-export-json').addEventListener('click', exportDatabaseJSON);
           document.getElementById('btn-import-json').addEventListener('click', () => {
             requireOwnerAccess(() => {
@@ -13119,6 +13712,49 @@
             const file = e.target.files?.[0];
             if (file) importDatabaseJSON(file);
             e.target.value = '';
+          });
+          document.getElementById('btn-toggle-backup-pass')?.addEventListener('click', () => {
+            const input = document.getElementById('backup-crypto-password');
+            const confirmInput = document.getElementById('backup-crypto-confirm');
+            const nextType = input.type === 'password' ? 'text' : 'password';
+            if (input) input.type = nextType;
+            if (confirmInput) confirmInput.type = nextType;
+          });
+          document.getElementById('btn-backup-export-plain')?.addEventListener('click', async () => {
+            const payload = await buildCleanActiveBackupSnapshot(false);
+            triggerDownloadJson(payload, `biopond-bsf-backup-${todayISO()}.json`);
+            closeModal('modal-backup-crypto');
+            showToast('File cadangan JSON standar berhasil diunduh.');
+          });
+          document.getElementById('form-backup-crypto')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pass = document.getElementById('backup-crypto-password')?.value || '';
+            try {
+              if (backupCryptoMode === 'export') {
+                const confirmPass = document.getElementById('backup-crypto-confirm')?.value || '';
+                if (pass.length < 4) {
+                  showToast('Password enkripsi minimal 4 karakter.', 'error');
+                  return;
+                }
+                if (pass !== confirmPass) {
+                  showToast('Konfirmasi password backup tidak cocok.', 'error');
+                  return;
+                }
+                const payload = await buildCleanActiveBackupSnapshot(true);
+                const encrypted = await encryptBackupPayload(payload, pass);
+                triggerDownloadJson(encrypted, `biopond-bsf-encrypted-${todayISO()}.json`);
+                closeModal('modal-backup-crypto');
+                showToast('Backup terenkripsi AES-256-GCM berhasil diunduh.');
+              } else {
+                if (!pendingEncryptedEnvelope) return;
+                const decrypted = await decryptBackupPayload(pendingEncryptedEnvelope, pass);
+                pendingEncryptedEnvelope = null;
+                closeModal('modal-backup-crypto');
+                await applyRestoredBackupObject(decrypted);
+              }
+            } catch (err) {
+              showToast(err.message || 'Gagal memproses enkripsi backup.', 'error');
+            }
           });
 
           // PWA Install & Connectivity

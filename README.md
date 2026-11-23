@@ -5,7 +5,7 @@
 **Aplikasi Manajemen Budidaya Maggot Black Soldier Fly (BSF) 100% Offline-First untuk Skala Rumahan & Komunitas.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
-[![Versi](https://img.shields.io/badge/versi-2.7.0-brightgreen.svg)](https://github.com/aiprojek/Biopond-BSF)
+[![Versi](https://img.shields.io/badge/versi-2.8.0-brightgreen.svg)](https://github.com/aiprojek/Biopond-BSF)
 [![PWA Offline-First](https://img.shields.io/badge/PWA-Offline--First-10b981.svg)](https://github.com/aiprojek/Biopond-BSF)
 
 ---
@@ -22,7 +22,7 @@ Dikembangkan oleh **[AI Projek](https://www.aiprojek01.my.id/)** secara terbuka 
 
 ## ✨ Fitur Utama
 
-- **📴 100% Offline-First PWA**: Seluruh pustaka UI & database di-hosting lokal dan langsung di-cache oleh Service Worker (`sw.js`) tanpa ketergantungan CDN eksternal, lengkap dengan **Export/Import Backup JSON**.
+- **📴 100% Offline-First PWA**: Seluruh pustaka UI & database di-hosting lokal dan langsung di-cache oleh Service Worker (`sw.js`) tanpa ketergantungan CDN eksternal, lengkap dengan **Export/Import Backup JSON & Backup Terenkripsi (`.bsfbackup` AES-256-GCM)** serta pemangkasan foto log lama.
 - **🪣 Master Wadah Permanen & 2 Prinsip Lindi**: Simpan profil wadah permanen (`W-001`, dst.) agar memulai batch baru cukup 1 ketuk tanpa mengetik ulang nama. Mendukung kategori **Menghasilkan Air Lindi** dan **Tanpa Air Lindi** dengan preset (*Ember Susun*, *Ember False Bottom*, *Ember Biasa*, *Bak / Rak*) maupun tipe **Lainnya (Kustom)**.
 - **📊 Dashboard, Checklist Harian & Peringatan Lingkungan**: Pantau metrik *real-time* (Biopond Aktif, Total Sampah Terurai, Panen Maggot Segar, Air Lindi), tugas harian otomatis sesuai umur batch, serta peringatan suhu, kelembapan, pH ekstrem, dan stok menipis.
 - **📅 Batch Tracker & Timeline Rotasi (Gantt View)**: Pantau umur batch (`Hari ke-X`), fase otomatis (`Penetasan H1–5`, `Pembesaran H6+`), marka pindah media & target panen dalam rentang 14/21/30 hari.
@@ -35,7 +35,7 @@ Dikembangkan oleh **[AI Projek](https://www.aiprojek01.my.id/)** secara terbuka 
 - **🤖 Diagnosa AI Multi-Provider + Vision AI (BYOK)**: Hubungkan API Key Anda sendiri untuk **Google Gemini**, **OpenRouter**, **Groq**, atau **OpenAI** beserta lampiran foto kondisi media dan konteks suhu/pH terbaru.
 - **🏷️ Cetak Label QR, Barcode 1D & Label General (Spidol)**: Cetak label batch maupun **Label General Reusable** berisi QR permanen (`BSF-WADAH:W-001`) + Barcode Code-39 + kotak isian spidol yang hemat kertas.
 - **🔔 Notifikasi Lokal PWA & Google Calendar / `.ICS`**: Pengingat harian langsung di browser maupun ekspor ke kalender OS agar alarm tetap berbunyi meski aplikasi ditutup.
-- **☁️ Sinkronisasi Cloud & Kode Pairing Cepat**: Sinkron antar HP/PC via **Cloudflare (`/api/sync` KV/R2)**, **Dropbox (OAuth2 PKCE)**, atau **WebDAV**, lengkap dengan **Kode Pairing 8 karakter / QR (`BSFPAIR:v1:...`)** dengan pilihan peran Pemilik atau Pekerja Kandang.
+- **☁️ Sinkronisasi Cloud & Kode Pairing Cepat**: Sinkron antar HP/PC via **Cloudflare (`/api/sync` KV/R2)**, **Dropbox (OAuth2 PKCE)**, atau **WebDAV** menggunakan workspace ID acak kriptografis (`kebun-xxxxxxxxxx`), dukungan *tombstone* penghapusan anti-resureksi, proteksi ukuran payload foto (18 MB), sinkronisasi PIN Pemilik dua arah, dan **Kode Pairing 8 karakter / QR (`BSFPAIR:v1:...`)**.
 
 ---
 
@@ -95,7 +95,7 @@ Bagian di bawah ini ditujukan bagi pemilik/pengelola hosting yang ingin men-depl
 ```text
 biopond-bsf/
 ├── index.html                  # Seluruh aplikasi PWA (UI, Dexie.js, AI BYOK, analitik WRI/FCR & Pairing)
-├── src/                        # Entry CSS Tailwind lokal & registrasi Service Worker
+├── src/                        # Entry Vite/CSS, registrasi SW, & modul inti teruji (src/core/)
 ├── public/                     # Ikon PWA & vendor lokal (/vendor/dexie.min.js, lucide.min.js, qrcode.js)
 ├── functions/                  # Cloudflare Pages Functions (Serverless Backend)
 │   └── api/
@@ -250,15 +250,15 @@ Di menu **Pengaturan → Sinkronisasi Antar Perangkat (Cloud)**, tersedia 3 pili
 
 ## 📐 Standar Pemversian & Panduan Rilis (Semantic Versioning)
 
-Untuk menjaga konsistensi pengembangan jangka panjang, **Biopond BSF** menggunakan standar **Semantic Versioning (`MAJOR.MINOR.PATCH`)** — misalnya `2.7.0` (ditampilkan di antarmuka sebagai `v2.7.0`).
+Untuk menjaga konsistensi pengembangan jangka panjang, **Biopond BSF** menggunakan standar **Semantic Versioning (`MAJOR.MINOR.PATCH`)** — misalnya `2.8.0` (ditampilkan di antarmuka sebagai `v2.8.0`).
 
 ### Aturan Kenaikan Nomor Versi
 - **`MAJOR` (`X.0.0`)**: Perubahan besar yang merombak arsitektur utama, alur inti aplikasi, atau perubahan format data yang tidak kompatibel mundur (*breaking change*).
-- **`MINOR` (`2.X.0`)**: Penambahan fitur baru atau peningkatan modul fungsional yang tetap kompatibel dengan data sebelumnya *(contoh: Master Wadah Permanen, Timeline Rotasi Gantt, dukungan wadah kustom)*.
-- **`PATCH` (`2.7.X`)**: Perbaikan bug, penyempurnaan teks/UI, atau peningkatan reliabilitas tanpa mengubah perilaku fitur besar *(contoh: perbaikan deteksi respons `/api/register`, penyesuaian layout modal)*.
+- **`MINOR` (`2.X.0`)**: Penambahan fitur baru atau peningkatan modul fungsional yang tetap kompatibel dengan data sebelumnya *(contoh: Master Wadah Permanen, Timeline Rotasi Gantt, backup terenkripsi AES-256-GCM)*.
+- **`PATCH` (`2.8.X`)**: Perbaikan bug, penyempurnaan teks/UI, atau peningkatan reliabilitas tanpa mengubah perilaku fitur besar *(contoh: perbaikan deteksi respons `/api/register`, penyesuaian layout modal)*.
 
 ### Prinsip Pemisahan Versi Aplikasi vs Skema Database Internal
-- **Antarmuka pengguna (UI), toast, & diagnostik** hanya menampilkan **versi aplikasi SemVer** (`v2.7.0`) dan **tidak menampilkan versi skema database internal** (`DB vX` / `IndexedDB vX`).
+- **Antarmuka pengguna (UI), toast, & diagnostik** hanya menampilkan **versi aplikasi SemVer** (`v2.8.0`) dan **tidak menampilkan versi skema database internal** (`DB vX` / `IndexedDB vX`).
 - Versi skema internal (`db.version(...)` di Dexie dan `schemaVersion` di snapshot JSON sync/backup) tetap dikelola di dalam kode semata-mata untuk migrasi database lokal otomatis dan kompatibilitas data antar perangkat.
 
 ### Checklist Setiap Kali Menaikkan Versi Rilis
@@ -271,6 +271,7 @@ Sebelum melakukan commit/deploy rilis baru, pastikan **3 titik berikut selalu si
 
 | Versi | Ringkasan Perubahan |
 | :--- | :--- |
+| **`v2.8.0`** | Backup terenkripsi password (**AES-256-GCM + PBKDF2-SHA256** `.bsfbackup`), *soft-delete tombstone* sinkronisasi multi-perangkat, proteksi batas payload foto 18 MB & pemangkasan foto >30 hari, default workspace ID acak kriptografis (`kebun-xxxxxxxxxx`), sinkronisasi PIN Pemilik dua arah, dan ekstraksi modul inti `src/core/` dengan unit test `bun test`. |
 | **`v2.7.0`** | Standarisasi versi SemVer (`2.7.0`), penghapusan label versi DB dari UI, perbaikan reliabilitas & status cek `/api/register`, pembaruan informasi pengembang & lisensi GNU GPL 3, serta penyempurnaan Master Wadah Permanen & 2 prinsip lindi. |
 
 ---
