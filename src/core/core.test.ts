@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   escapeHTML,
   generateRandomWorkspaceId,
+  sanitizeCsvCell,
   sanitizeImageDataUrl,
   sanitizeSyncUrl,
 } from './sanitizers.ts';
@@ -56,6 +57,13 @@ describe('sanitizers', () => {
     expect(escapeHTML('<script>"test" & \'x\'</script>')).toBe(
       '&lt;script&gt;&quot;test&quot; &amp; &#39;x&#39;&lt;/script&gt;'
     );
+  });
+
+  test('sanitizeCsvCell neutralizes spreadsheet formula prefixes while keeping numbers', () => {
+    expect(sanitizeCsvCell('=HYPERLINK("http://evil.com")')).toBe('"\'=HYPERLINK(""http://evil.com"")"');
+    expect(sanitizeCsvCell('+SUM(A1:A2)')).toBe('"\'+SUM(A1:A2)"');
+    expect(sanitizeCsvCell('@cmd')).toBe('"\'@cmd"');
+    expect(sanitizeCsvCell(-15000)).toBe('"-15000"');
   });
 });
 

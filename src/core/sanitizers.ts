@@ -46,3 +46,12 @@ export function generateRandomWorkspaceId(prefix = 'kebun'): string {
       .replace(/[^a-z0-9_-]/g, '') || 'kebun';
   return `${cleanPrefix}-${suffix}`;
 }
+
+export function sanitizeCsvCell(val: unknown): string {
+  if (typeof val === 'number' && Number.isFinite(val)) {
+    return `"${val}"`;
+  }
+  const str = String(val ?? '');
+  const safe = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+  return `"${safe.replace(/"/g, '""')}"`;
+}

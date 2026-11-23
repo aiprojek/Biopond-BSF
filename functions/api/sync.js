@@ -1,9 +1,40 @@
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Cache-Control': 'no-store',
-};
+function getAllowedOrigin(request, env) {
+  const origin = request.headers.get('Origin') || '';
+  if (!origin) return '';
+  try {
+    const reqOrigin = new URL(request.url).origin;
+    if (origin === reqOrigin) return origin;
+    const parsedOrigin = new URL(origin);
+    if (
+      (parsedOrigin.protocol === 'http:' || parsedOrigin.protocol === 'https:') &&
+      (parsedOrigin.hostname === 'localhost' || parsedOrigin.hostname === '127.0.0.1')
+    ) {
+      return origin;
+    }
+    const extraAllowed = String(env?.SYNC_ALLOWED_ORIGIN || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (extraAllowed.includes(origin)) return origin;
+  } catch {
+    return '';
+  }
+  return '';
+}
+
+function buildCorsHeaders(request, env) {
+  const allowedOrigin = getAllowedOrigin(request, env);
+  const headers = {
+    'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'no-store',
+    Vary: 'Origin',
+  };
+  if (allowedOrigin) {
+    headers['Access-Control-Allow-Origin'] = allowedOrigin;
+  }
+  return headers;
+}
 
 function sanitizeWorkspace(raw) {
   const cleaned = String(raw || 'default')
@@ -45,11 +76,12 @@ function isAuthorized(request, env) {
   return timingSafeEqualStr(token, expected);
 }
 
-export async function onRequestOptions() {
-  return new Response(null, { status: 204, headers: CORS_HEADERS });
+export async function onRequestOptions({ request, env }) {
+  return new Response(null, { status: 204, headers: buildCorsHeaders(request, env) });
 }
 
 export async function onRequestGet({ request, env }) {
+  const CORS_HEADERS = buildCorsHeaders(request, env);
   const url = new URL(request.url);
   const pairId = sanitizePairId(url.searchParams.get('pair'));
 
@@ -159,13 +191,14 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPut({ request, env }) {
+  const CORS_HEADERS = buildCorsHeaders(request, env);
   const url = new URL(request.url);
   const pairId = sanitizePairId(url.searchParams.get('pair'));
 
   if (pairId) {
     try {
       const rawBody = await request.text();
-      if (rawBody.length > MAX_PAIR_BYTES) {
+      if (new TextEncoder().encode(rawBody).length > MAX_PAIR_BYTES) {
         return new Response(JSON.stringify({ error: 'Ukuran payload pairing melebihi batas (16 KB).' }), {
           status: 413,
           headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
@@ -249,7 +282,7 @@ export async function onRequestPut({ request, env }) {
 
   try {
     const rawBody = await request.text();
-    if (rawBody.length > MAX_SYNC_BYTES) {
+    if (new TextEncoder().encode(rawBody).length > MAX_SYNC_BYTES) {
       return new Response(JSON.stringify({ error: 'Ukuran data sinkronisasi melebihi batas 20 MB.' }), {
         status: 413,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },

@@ -4487,10 +4487,16 @@
             transactions: '++id, syncUid, type, category, date, amount, createdAt',
           })
           .upgrade(async (tx) => {
-            const uid = () =>
-              typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-                ? crypto.randomUUID()
-                : 'uid-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+            const uid = () => {
+              if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                return crypto.randomUUID();
+              }
+              const bytes = new Uint8Array(12);
+              if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+                crypto.getRandomValues(bytes);
+              }
+              return 'uid-' + Date.now() + '-' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+            };
             await tx.table('bioponds').toCollection().modify((p) => {
               if (!p.syncUid) p.syncUid = uid();
               if (!p.zone) p.zone = '';
@@ -5047,8 +5053,9 @@
           if (target === 'operator') {
             if (operatorId) {
               op = await db.operators.get(Number(operatorId));
+              if (op && !isActiveRecord(op)) op = null;
             } else if (operatorName) {
-              op = await db.operators.where('name').equals(operatorName).first();
+              op = await db.operators.where('name').equals(operatorName).filter(isActiveRecord).first();
             }
             if (op) {
               operatorId = op.id;
@@ -5194,8 +5201,9 @@
             let op = null;
             if (pinAction.operatorId) {
               op = await db.operators.get(Number(pinAction.operatorId));
+              if (op && !isActiveRecord(op)) op = null;
             } else if (pinAction.operatorName) {
-              op = await db.operators.where('name').equals(pinAction.operatorName).first();
+              op = await db.operators.where('name').equals(pinAction.operatorName).filter(isActiveRecord).first();
             }
             question = op?.recoveryQuestion || '';
             hasHash = Boolean(op?.recoveryAnswerHash);
@@ -5479,6 +5487,20 @@
           return '';
         }
 
+        function sanitizeCsvCell(val) {
+          if (window.BSFCore?.sanitizeCsvCell) return window.BSFCore.sanitizeCsvCell(val);
+          if (typeof val === 'number' && Number.isFinite(val)) return `"${val}"`;
+          const str = String(val ?? '');
+          const safe = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+          return `"${safe.replace(/"/g, '""')}"`;
+        }
+
+        function generateSecureId(prefix = 'uid') {
+          const bytes = new Uint8Array(12);
+          if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+          return `${prefix}-${Date.now()}-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+        }
+
         function generateRandomWorkspaceId(prefix = 'kebun') {
           if (window.BSFCore?.generateRandomWorkspaceId) return window.BSFCore.generateRandomWorkspaceId(prefix);
           const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -5660,7 +5682,7 @@
           if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
             return crypto.randomUUID();
           }
-          return 'bsf-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+          return generateSecureId('bsf');
         }
 
         function getCityLevelCoordinates() {
@@ -6193,7 +6215,7 @@
           if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
             return crypto.randomUUID();
           }
-          return 'uid-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+          return generateSecureId('uid');
         }
 
         function formatIDR(num) {
@@ -9360,10 +9382,10 @@
 
         async function getMonthlyReportData(monthStr) {
           const month = monthStr || todayISO().slice(0, 7);
-          const logsAll = cachedAppData?.logs || (await db.daily_logs.toArray());
-          const harvestsAll = cachedAppData?.harvests || (await db.harvests.toArray());
-          const eggsAll = cachedAppData?.eggHarvests || (await db.egg_harvests.toArray());
-          const txsAll = cachedAppData?.transactions || (await db.transactions.toArray());
+          const logsAll = (cachedAppData?.logs || (await db.daily_logs.toArray())).filter(isActiveRecord);
+          const harvestsAll = (cachedAppData?.harvests || (await db.harvests.toArray())).filter(isActiveRecord);
+          const eggsAll = (cachedAppData?.eggHarvests || (await db.egg_harvests.toArray())).filter(isActiveRecord);
+          const txsAll = (cachedAppData?.transactions || (await db.transactions.toArray())).filter(isActiveRecord);
 
           const logs = logsAll.filter((l) => String(l.date || '').startsWith(month));
           const harvests = harvestsAll.filter((h) => String(h.date || '').startsWith(month));
@@ -9405,6 +9427,9 @@
         }
 
         async function printMonthlyReport(monthStr) {
+          if (isWorkerLocked()) {
+            return requireOwnerAccess(() => printMonthlyReport(monthStr));
+          }
           const rep = await getMonthlyReportData(monthStr);
           const farmName = localStorage.getItem(STORAGE_KEYS.farmName) || 'Peternakan Biopond BSF';
           const farmCity = localStorage.getItem(STORAGE_KEYS.farmCity) || '';
@@ -9564,9 +9589,12 @@
         }
 
         async function exportMonthlyCSV(monthStr) {
+          if (isWorkerLocked()) {
+            return requireOwnerAccess(() => exportMonthlyCSV(monthStr));
+          }
           const rep = await getMonthlyReportData(monthStr);
           const s = rep.summary;
-          const csvCell = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+          const csvCell = (val) => sanitizeCsvCell(val);
           const rows = [
             ['LAPORAN BULANAN BIOPOND BSF', rep.month, localStorage.getItem(STORAGE_KEYS.farmName) || 'Peternakan BSF'],
             ['Ringkasan', 'Nilai', 'Satuan'],
@@ -9869,7 +9897,7 @@
               }
 
               const op = await db.operators.get(id);
-              if (!op) return;
+              if (!op || !isActiveRecord(op)) return;
 
               if (curRole === 'owner') {
                 // Owner master reset/management
@@ -12058,10 +12086,22 @@
           if (!data || !Array.isArray(data.bioponds) || !Array.isArray(data.harvests) || !Array.isArray(data.daily_logs)) {
             throw new Error('Format JSON tidak cocok dengan skema Biopond BSF.');
           }
-          data.daily_logs = data.daily_logs.map((l) => ({
+          const cleanArr = (arr) =>
+            Array.isArray(arr) ? arr.filter((item) => item && typeof item === 'object' && !Array.isArray(item)) : [];
+          const cleanContainers = cleanArr(data.containers);
+          const cleanBioponds = cleanArr(data.bioponds);
+          const cleanHarvests = cleanArr(data.harvests);
+          const cleanDailyLogs = cleanArr(data.daily_logs).map((l) => ({
             ...l,
             photoDataUrl: sanitizeImageDataUrl(l?.photoDataUrl),
           }));
+          const cleanCages = cleanArr(data.cages);
+          const cleanEggHarvests = cleanArr(data.egg_harvests);
+          const cleanTransactions = cleanArr(data.transactions);
+          const cleanEnvLogs = cleanArr(data.env_logs);
+          const cleanFeedStocks = cleanArr(data.feed_stocks);
+          const cleanFeedLedger = cleanArr(data.feed_ledger);
+          const cleanOperators = cleanArr(data.operators);
 
           await db.transaction(
             'rw',
@@ -12088,41 +12128,38 @@
               await db.feed_stocks.clear();
               await db.feed_ledger.clear();
               await db.operators.clear();
-              if (Array.isArray(data.containers) && data.containers.length) await db.containers.bulkPut(data.containers);
-              if (data.bioponds.length) await db.bioponds.bulkPut(data.bioponds);
-              if (data.harvests.length) await db.harvests.bulkPut(data.harvests);
-              if (data.daily_logs.length) await db.daily_logs.bulkPut(data.daily_logs);
-              if (Array.isArray(data.cages) && data.cages.length) await db.cages.bulkPut(data.cages);
-              if (Array.isArray(data.egg_harvests) && data.egg_harvests.length)
-                await db.egg_harvests.bulkPut(data.egg_harvests);
-              if (Array.isArray(data.transactions) && data.transactions.length)
-                await db.transactions.bulkPut(data.transactions);
-              if (Array.isArray(data.env_logs) && data.env_logs.length) await db.env_logs.bulkPut(data.env_logs);
-              if (Array.isArray(data.feed_stocks) && data.feed_stocks.length)
-                await db.feed_stocks.bulkPut(data.feed_stocks);
-              if (Array.isArray(data.feed_ledger) && data.feed_ledger.length)
-                await db.feed_ledger.bulkPut(data.feed_ledger);
-              if (Array.isArray(data.operators) && data.operators.length) await db.operators.bulkPut(data.operators);
+              if (cleanContainers.length) await db.containers.bulkPut(cleanContainers);
+              if (cleanBioponds.length) await db.bioponds.bulkPut(cleanBioponds);
+              if (cleanHarvests.length) await db.harvests.bulkPut(cleanHarvests);
+              if (cleanDailyLogs.length) await db.daily_logs.bulkPut(cleanDailyLogs);
+              if (cleanCages.length) await db.cages.bulkPut(cleanCages);
+              if (cleanEggHarvests.length) await db.egg_harvests.bulkPut(cleanEggHarvests);
+              if (cleanTransactions.length) await db.transactions.bulkPut(cleanTransactions);
+              if (cleanEnvLogs.length) await db.env_logs.bulkPut(cleanEnvLogs);
+              if (cleanFeedStocks.length) await db.feed_stocks.bulkPut(cleanFeedStocks);
+              if (cleanFeedLedger.length) await db.feed_ledger.bulkPut(cleanFeedLedger);
+              if (cleanOperators.length) await db.operators.bulkPut(cleanOperators);
             }
           );
           await ensureSyncUids();
           await recalculateFeedStocksFromLedger();
 
+          const validHashPattern = /^([a-f0-9]{64}|fnv(-ans)?-[a-f0-9]+)$/i;
           if (typeof parsed.farmName === 'string' && parsed.farmName.trim()) {
-            localStorage.setItem(STORAGE_KEYS.farmName, parsed.farmName.trim());
+            localStorage.setItem(STORAGE_KEYS.farmName, parsed.farmName.trim().slice(0, 120));
           }
           if (typeof parsed.farmCity === 'string' && parsed.farmCity.trim()) {
-            localStorage.setItem(STORAGE_KEYS.farmCity, parsed.farmCity.trim());
+            localStorage.setItem(STORAGE_KEYS.farmCity, parsed.farmCity.trim().slice(0, 80));
           }
-          if (typeof parsed.ownerPinHash === 'string' && parsed.ownerPinHash) {
-            localStorage.setItem(STORAGE_KEYS.ownerPinHash, parsed.ownerPinHash);
-            localStorage.setItem(STORAGE_KEYS.ownerPinUpdatedAt, String(parsed.ownerPinUpdatedAt || Date.now()));
+          if (typeof parsed.ownerPinHash === 'string' && validHashPattern.test(parsed.ownerPinHash.trim())) {
+            localStorage.setItem(STORAGE_KEYS.ownerPinHash, parsed.ownerPinHash.trim());
+            localStorage.setItem(STORAGE_KEYS.ownerPinUpdatedAt, String(Number(parsed.ownerPinUpdatedAt) || Date.now()));
           }
-          if (typeof parsed.ownerRecoveryQuestion === 'string' && parsed.ownerRecoveryQuestion) {
-            localStorage.setItem(STORAGE_KEYS.ownerRecoveryQuestion, parsed.ownerRecoveryQuestion);
+          if (typeof parsed.ownerRecoveryQuestion === 'string' && parsed.ownerRecoveryQuestion.trim()) {
+            localStorage.setItem(STORAGE_KEYS.ownerRecoveryQuestion, parsed.ownerRecoveryQuestion.trim().slice(0, 200));
           }
-          if (typeof parsed.ownerRecoveryAnswerHash === 'string' && parsed.ownerRecoveryAnswerHash) {
-            localStorage.setItem(STORAGE_KEYS.ownerRecoveryAnswerHash, parsed.ownerRecoveryAnswerHash);
+          if (typeof parsed.ownerRecoveryAnswerHash === 'string' && validHashPattern.test(parsed.ownerRecoveryAnswerHash.trim())) {
+            localStorage.setItem(STORAGE_KEYS.ownerRecoveryAnswerHash, parsed.ownerRecoveryAnswerHash.trim());
           }
           syncHeaderAndAILabels();
           loadSettingsIntoUI();
@@ -12934,6 +12971,14 @@
             e.preventDefault();
             if (!pendingRecoveryAction) return;
 
+            const recLockKey = 'recovery_' + getPinLockoutKey(pendingRecoveryAction);
+            const recLockState = getPinLockoutState(recLockKey);
+            if (recLockState.lockedUntil > Date.now()) {
+              const remainSec = Math.ceil((recLockState.lockedUntil - Date.now()) / 1000);
+              showToast(`Pemulihan dikunci sementara (${remainSec} detik lagi).`, 'error');
+              return;
+            }
+
             const enteredAnswer = (document.getElementById('recovery-answer-input').value || '').trim();
             if (!enteredAnswer) {
               showToast('Ketik jawaban pemulihan.', 'error');
@@ -12949,18 +12994,25 @@
               let op = null;
               if (pendingRecoveryAction.operatorId) {
                 op = await db.operators.get(Number(pendingRecoveryAction.operatorId));
+                if (op && !isActiveRecord(op)) op = null;
               } else if (pendingRecoveryAction.operatorName) {
-                op = await db.operators.where('name').equals(pendingRecoveryAction.operatorName).first();
+                op = await db.operators.where('name').equals(pendingRecoveryAction.operatorName).filter(isActiveRecord).first();
               }
               expectedHash = op?.recoveryAnswerHash || '';
             }
 
             if (!expectedHash || enteredAnsHash !== expectedHash) {
-              showToast('Jawaban bantuan salah! Periksa kembali ejaan.', 'error');
-              document.getElementById('recovery-answer-input').select();
+              const failInfo = recordPinFailure(recLockKey);
+              if (failInfo.lockedUntil > Date.now()) {
+                showToast('Terlalu banyak percobaan pemulihan salah! Dikunci sementara.', 'error');
+              } else {
+                showToast(`Jawaban bantuan salah! (${failInfo.remainingAttempts}× lagi sebelum jeda keamanan)`, 'error');
+                document.getElementById('recovery-answer-input').select();
+              }
               return;
             }
 
+            clearPinLockout(recLockKey);
             clearPinLockout(getPinLockoutKey(pendingRecoveryAction));
             const nextAction = { ...pendingRecoveryAction, mode: 'setup' };
             pendingRecoveryAction = null;
@@ -13004,6 +13056,9 @@
           });
 
           const addOperatorRecord = async (name, role = 'worker') => {
+            if (isWorkerLocked()) {
+              return requireOwnerAccess(() => addOperatorRecord(name, role));
+            }
             const clean = String(name || '').trim();
             if (!clean) return;
             const exists = await db.operators.where('name').equals(clean).filter(isActiveRecord).first();
@@ -13125,7 +13180,7 @@
 
             let containerUid = (document.getElementById('biopond-container-uid')?.value || '').trim();
             let containerCode = (document.getElementById('biopond-container-code')?.value || '').trim();
-            const allConts = await db.containers.toArray();
+            const allConts = (await db.containers.toArray()).filter(isActiveRecord);
             let contRecord = containerUid ? allConts.find((c) => c.syncUid === containerUid) : null;
             if (!contRecord && cleanName) {
               const norm = cleanName.toLowerCase();
@@ -13367,6 +13422,10 @@
           // Form: Transaksi Keuangan
           document.getElementById('form-transaction').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (isWorkerLocked()) {
+              showToast('Catatan keuangan hanya diizinkan dalam Mode Pemilik.', 'error');
+              return;
+            }
             const type = document.getElementById('tx-type').value || 'expense';
             await db.transactions.add({
               syncUid: makeSyncUid(),
@@ -13644,18 +13703,43 @@
               setSyncStatusBox('Masukkan Dropbox App Key terlebih dahulu sebelum membuka halaman izin.', true);
             }
           });
-          document.getElementById('btn-dbx-exchange-code')?.addEventListener('click', exchangeDropboxAuthCode);
-          document.getElementById('btn-dbx-disconnect')?.addEventListener('click', disconnectDropbox);
+          document.getElementById('btn-dbx-exchange-code')?.addEventListener('click', () => {
+            if (isWorkerLocked()) return requireOwnerAccess(exchangeDropboxAuthCode);
+            exchangeDropboxAuthCode();
+          });
+          document.getElementById('btn-dbx-disconnect')?.addEventListener('click', () => {
+            if (isWorkerLocked()) return requireOwnerAccess(disconnectDropbox);
+            disconnectDropbox();
+          });
           document.getElementById('btn-sync-test')?.addEventListener('click', async () => {
+            if (isWorkerLocked()) {
+              return requireOwnerAccess(async () => {
+                const cfg = readSyncConfigFromInputs();
+                saveSyncConfig(cfg);
+                await testCloudSync(cfg);
+              });
+            }
             const cfg = readSyncConfigFromInputs();
             saveSyncConfig(cfg);
             await testCloudSync(cfg);
           });
           document.getElementById('btn-sync-push')?.addEventListener('click', async () => {
+            if (isWorkerLocked()) {
+              return requireOwnerAccess(async () => {
+                saveSyncConfig(readSyncConfigFromInputs());
+                await runCloudSync('push', false);
+              });
+            }
             saveSyncConfig(readSyncConfigFromInputs());
             await runCloudSync('push', false);
           });
           document.getElementById('btn-sync-pull')?.addEventListener('click', async () => {
+            if (isWorkerLocked()) {
+              return requireOwnerAccess(async () => {
+                saveSyncConfig(readSyncConfigFromInputs());
+                await runCloudSync('pull', false);
+              });
+            }
             saveSyncConfig(readSyncConfigFromInputs());
             await runCloudSync('pull', false);
           });
@@ -13690,6 +13774,10 @@
           });
 
           document.getElementById('btn-sync-gen-workspace')?.addEventListener('click', () => {
+            if (isWorkerLocked()) {
+              showToast('Pengaturan workspace sync hanya dapat diubah dalam Mode Pemilik.', 'error');
+              return;
+            }
             const nextId = generateRandomWorkspaceId('kebun');
             const wsInput = document.getElementById('sync-cf-workspace');
             if (wsInput) wsInput.value = nextId;
@@ -13721,6 +13809,10 @@
             if (confirmInput) confirmInput.type = nextType;
           });
           document.getElementById('btn-backup-export-plain')?.addEventListener('click', async () => {
+            if (isWorkerLocked()) {
+              showToast('Ekspor backup hanya diizinkan dalam Mode Pemilik.', 'error');
+              return;
+            }
             const payload = await buildCleanActiveBackupSnapshot(false);
             triggerDownloadJson(payload, `biopond-bsf-backup-${todayISO()}.json`);
             closeModal('modal-backup-crypto');

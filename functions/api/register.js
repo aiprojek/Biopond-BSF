@@ -25,13 +25,25 @@ export async function onRequestPost({ request, env }) {
       });
     }
 
-    const body = await request.json();
+    const rawTextBody = await request.text();
+    if (new TextEncoder().encode(rawTextBody).length > 8192) {
+      return new Response(JSON.stringify({ ok: false, reason: 'payload_too_large' }), {
+        status: 413,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const body = JSON.parse(rawTextBody || '{}');
+    const cleanField = (val, maxLen = 120, fallback = '') =>
+      String(val || fallback)
+        .replace(/[\r\n]+/g, ' ')
+        .trim()
+        .slice(0, maxLen);
     const payload = {
-      device_id: String(body.device_id || ''),
-      nama: String(body.nama || ''),
-      kota: String(body.kota || ''),
-      location: String(body.location || 'none'),
-      timezone: String(body.timezone || 'Asia/Jakarta'),
+      device_id: cleanField(body?.device_id, 64),
+      nama: cleanField(body?.nama, 120),
+      kota: cleanField(body?.kota, 80),
+      location: cleanField(body?.location || 'none', 120, 'none'),
+      timezone: cleanField(body?.timezone || 'Asia/Jakarta', 64, 'Asia/Jakarta'),
     };
 
     const gasRes = await fetch(webhookUrl, {
