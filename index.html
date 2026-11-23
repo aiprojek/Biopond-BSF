@@ -4459,6 +4459,7 @@
           pinLockoutMap: 'bsf_pin_lockout_map',
           notifConfig: 'bsf_pwa_notif_config',
           lastNotifDate: 'bsf_pwa_notif_last_date',
+          telemetrySynced: 'bsf_telemetry_synced',
         };
 
         const SECURITY_QUESTIONS = [
@@ -5389,23 +5390,13 @@
           localStorage.setItem(STORAGE_KEYS.userLocation, location);
 
           // Kirim data pengguna anonim ke GAS via /api/register (hanya lokasi saja)
-          const payload = {
+          await sendTelemetryRegistration({
             device_id,
             nama: 'Anonim',
             kota: 'none',
             location,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
-          };
-
-          try {
-            await fetch('/api/register', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            });
-          } catch {
-            // Senyap agar aplikasi berjalan 100% normal tanpa backend / saat offline
-          }
+          });
 
           syncHeaderAndAILabels();
           closeModal('modal-onboarding');
@@ -5452,23 +5443,54 @@
           btnText.textContent = 'Simpan & Mulai Budidaya';
 
           // Kirim statistik komunitas secara senyap (non-blocking)
-          const payload = {
+          await sendTelemetryRegistration({
             device_id,
             nama,
             kota: kota || 'none',
             location,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
-          };
+          });
+        }
 
+        async function sendTelemetryRegistration(payload) {
           try {
-            await fetch('/api/register', {
+            const res = await fetch('/api/register', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload),
             });
+            if (!res.ok) return false;
+            const ct = res.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) return false;
+            const data = await res.json();
+            if (data?.ok && !data?.skipped) {
+              localStorage.setItem(STORAGE_KEYS.telemetrySynced, '1');
+              return true;
+            }
           } catch {
             // Senyap agar aplikasi berjalan 100% normal tanpa backend / saat offline
           }
+          return false;
+        }
+
+        async function syncTelemetryIfPending() {
+          if (!navigator.onLine) return;
+          if (!localStorage.getItem(STORAGE_KEYS.onboarded)) return;
+          if (localStorage.getItem(STORAGE_KEYS.telemetrySynced) === '1') return;
+
+          const device_id = localStorage.getItem(STORAGE_KEYS.deviceId) || generateDeviceUUID();
+          localStorage.setItem(STORAGE_KEYS.deviceId, device_id);
+          const nama = localStorage.getItem(STORAGE_KEYS.farmName) || 'Anonim';
+          const kota = localStorage.getItem(STORAGE_KEYS.farmCity) || 'none';
+          const location = localStorage.getItem(STORAGE_KEYS.userLocation) || 'none';
+
+          await sendTelemetryRegistration({
+            device_id,
+            nama,
+            kota,
+            location,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
+          });
         }
 
         async function updateTelemetryProfileSilently(nama, kota) {
@@ -5487,23 +5509,13 @@
             }
           }
 
-          const payload = {
+          await sendTelemetryRegistration({
             device_id,
             nama: nama || 'Peternak',
             kota: kota || 'none',
             location,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
-          };
-
-          try {
-            await fetch('/api/register', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            });
-          } catch {
-            // Senyap saat offline
-          }
+          });
         }
 
         // =========================================================================
@@ -11426,7 +11438,7 @@
           saveSyncConfig(readSyncConfigFromInputs());
 
           // Perbarui data pengguna di Google Apps Script (GAS) jika profil diisi / diperbarui di Pengaturan
-          if (profileChanged && (farmName || farmCity)) {
+          if ((profileChanged || localStorage.getItem(STORAGE_KEYS.telemetrySynced) !== '1') && (farmName || farmCity)) {
             updateTelemetryProfileSilently(farmName, farmCity);
           }
 
@@ -13112,6 +13124,7 @@
           renderDiagnosisHistory();
           initEventListeners();
           checkOnboarding();
+          syncTelemetryIfPending();
           fetchAppConfigSilently();
           await ensureSyncUids();
           await refreshAllData();
