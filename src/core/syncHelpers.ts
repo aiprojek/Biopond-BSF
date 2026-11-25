@@ -147,3 +147,66 @@ export function trimSnapshotPhotosForLimit<T extends { data?: { daily_logs?: Syn
   currentBytes = new TextEncoder().encode(JSON.stringify(cloned)).length;
   return { snapshot: cloned, trimmedCount, byteSize: currentBytes };
 }
+
+export interface ChecklistTaskEntry {
+  done: boolean;
+  updatedAt: number;
+}
+
+export type DailyChecklistMap = Record<string, Record<string, ChecklistTaskEntry | boolean>>;
+
+export function normalizeChecklistDayMap(
+  dayMap: Record<string, ChecklistTaskEntry | boolean> | null | undefined
+): Record<string, ChecklistTaskEntry> {
+  const normalized: Record<string, ChecklistTaskEntry> = {};
+  if (!dayMap || typeof dayMap !== 'object' || Array.isArray(dayMap)) return normalized;
+  for (const [taskId, rawVal] of Object.entries(dayMap)) {
+    if (!taskId) continue;
+    if (typeof rawVal === 'boolean') {
+      normalized[taskId] = { done: rawVal, updatedAt: rawVal ? 1 : 0 };
+    } else if (rawVal && typeof rawVal === 'object') {
+      normalized[taskId] = {
+        done: Boolean(rawVal.done),
+        updatedAt: Number(rawVal.updatedAt) || 0,
+      };
+    }
+  }
+  return normalized;
+}
+
+export function mergeDailyChecklists(
+  localMap: DailyChecklistMap | null | undefined,
+  remoteMap: DailyChecklistMap | null | undefined,
+  maxAgeDays = 14,
+  todayStr?: string
+): Record<string, Record<string, ChecklistTaskEntry>> {
+  const merged: Record<string, Record<string, ChecklistTaskEntry>> = {};
+  const today = todayStr || new Date().toISOString().split('T')[0];
+  const cutoffMs = new Date(`${today}T00:00:00Z`).getTime() - maxAgeDays * 86400000;
+
+  const isFreshDate = (dateIso: string): boolean => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) return false;
+    const ts = new Date(`${dateIso}T00:00:00Z`).getTime();
+    return Number.isFinite(ts) && ts >= cutoffMs;
+  };
+
+  const absorb = (source: DailyChecklistMap | null | undefined) => {
+    if (!source || typeof source !== 'object' || Array.isArray(source)) return;
+    for (const [dateIso, dayVal] of Object.entries(source)) {
+      if (!isFreshDate(dateIso)) continue;
+      const normDay = normalizeChecklistDayMap(dayVal);
+      if (!merged[dateIso]) merged[dateIso] = {};
+      for (const [taskId, entry] of Object.entries(normDay)) {
+        const cur = merged[dateIso][taskId];
+        if (!cur || entry.updatedAt > cur.updatedAt) {
+          merged[dateIso][taskId] = entry;
+        }
+      }
+    }
+  };
+
+  absorb(localMap);
+  absorb(remoteMap);
+  return merged;
+}
+

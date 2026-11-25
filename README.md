@@ -5,7 +5,7 @@
 **Aplikasi Manajemen Budidaya Maggot Black Soldier Fly (BSF) 100% Offline-First untuk Skala Rumahan & Komunitas.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
-[![Versi](https://img.shields.io/badge/versi-2.8.0-brightgreen.svg)](https://github.com/aiprojek/Biopond-BSF)
+[![Versi](https://img.shields.io/badge/versi-2.9.0-brightgreen.svg)](https://github.com/aiprojek/Biopond-BSF)
 [![PWA Offline-First](https://img.shields.io/badge/PWA-Offline--First-10b981.svg)](https://github.com/aiprojek/Biopond-BSF)
 
 ---
@@ -271,6 +271,7 @@ Sebelum melakukan commit/deploy rilis baru, pastikan **3 titik berikut selalu si
 
 | Versi | Ringkasan Perubahan |
 | :--- | :--- |
+| **`v2.9.0`** | Modal Detail & Riwayat satuan (edit/hapus log sampah, panen, suhu/pH, & telur plus pemulihan stok pakan otomatis), pembekuan umur siklus batch selesai (`closedDate`) untuk akurasi WRI/Gantt, saran pakan harian otomatis dari Kalkulator Daya Makan + peringatan *overload* di form Catat Sampah, biaya bibit & HPP per batch serta proteksi akses finansial gudang pada Mode Pekerja, filter periode & grafik tren 6 bulan di Analisis FCR, dan sinkronisasi status Checklist Harian (auto-centang & lintas perangkat). |
 | **`v2.8.0`** | Backup terenkripsi password (**AES-256-GCM + PBKDF2-SHA256** `.bsfbackup`), *soft-delete tombstone* sinkronisasi multi-perangkat, proteksi batas payload foto 18 MB & pemangkasan foto >30 hari, default workspace ID acak kriptografis (`kebun-xxxxxxxxxx`), sinkronisasi PIN Pemilik dua arah, dan ekstraksi modul inti `src/core/` dengan unit test `bun test`. |
 | **`v2.7.0`** | Standarisasi versi SemVer (`2.7.0`), penghapusan label versi DB dari UI, perbaikan reliabilitas & status cek `/api/register`, pembaruan informasi pengembang & lisensi GNU GPL 3, serta penyempurnaan Master Wadah Permanen & 2 prinsip lindi. |
 

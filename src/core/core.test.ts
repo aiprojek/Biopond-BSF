@@ -14,13 +14,19 @@ import {
 import {
   computeRecordMergePlan,
   isActiveRecord,
+  mergeDailyChecklists,
   resolvePinSyncState,
   trimSnapshotPhotosForLimit,
   type SyncRecord,
 } from './syncHelpers.ts';
 import {
   calcBioconversionMetrics,
+  calcDayAge,
+  computeBatchCostAndHpp,
   computeFeedStockBalance,
+  computeMonthlyTrendSeries,
+  estimateDailyFeedRecommendation,
+  getPondEffectiveEndDate,
   inferHasLindi,
 } from './metrics.ts';
 
@@ -199,5 +205,82 @@ describe('metrics', () => {
     expect(bal.stockKg).toBe(37.5);
     expect(bal.totalUsedKg).toBe(12.5);
     expect(bal.costTotal).toBe(25000);
+  });
+
+  test('getPondEffectiveEndDate and calcDayAge freeze finished cycle duration', () => {
+    const pond = { id: 10, status: 'Selesai', startDate: '2026-10-01', closedDate: '2026-10-14' };
+    const end = getPondEffectiveEndDate(pond, [], '2026-11-23');
+    expect(end).toBe('2026-10-14');
+    expect(calcDayAge(pond.startDate, end)).toBe(14);
+
+    // Fallback to latest harvest date when closedDate is missing
+    const legacyPond = { id: 11, status: 'Selesai', startDate: '2026-10-01' };
+    const harvests = [
+      { biopondId: 11, date: '2026-10-12' },
+      { biopondId: 11, date: '2026-10-15' },
+      { biopondId: 11, date: '2026-10-20', deletedAt: 999 },
+    ];
+    const legacyEnd = getPondEffectiveEndDate(legacyPond, harvests, '2026-11-23');
+    expect(legacyEnd).toBe('2026-10-15');
+    expect(calcDayAge(legacyPond.startDate, legacyEnd)).toBe(15);
+  });
+
+  test('estimateDailyFeedRecommendation calculates daily feeding curve accurately', () => {
+    const recDay8 = estimateDailyFeedRecommendation(10, 8);
+    expect(recDay8.recommendedKg).toBe(9.5);
+    expect(recDay8.estPopulation).toBe(150000);
+    expect(recDay8.minAreaM2).toBe(0.5);
+  });
+
+  test('computeBatchCostAndHpp sums feedCost + seedCost and derives batch HPP', () => {
+    const res = computeBatchCostAndHpp(
+      { seedCost: 25000 },
+      [
+        { feedKg: 40, feedCost: 20000 },
+        { feedKg: 35, feedCost: 15000 },
+        { feedKg: 99, feedCost: 99000, deletedAt: 100 },
+      ],
+      [{ maggotKg: 15, kasgotKg: 20 }]
+    );
+    expect(res.feedKg).toBe(75);
+    expect(res.maggotKg).toBe(15);
+    expect(res.totalCost).toBe(60000);
+    expect(res.hppPerKg).toBe(4000);
+    expect(res.fcr).toBe(5);
+  });
+
+  test('computeMonthlyTrendSeries aggregates logs and harvests chronologically', () => {
+    const series = computeMonthlyTrendSeries(
+      [
+        { date: '2026-10-05', feedKg: 20 },
+        { date: '2026-11-10', feedKg: 45 },
+      ],
+      [{ date: '2026-11-20', maggotKg: 10 }],
+      3,
+      '2026-11-23'
+    );
+    expect(series.length).toBe(3);
+    expect(series[1].month).toBe('2026-10');
+    expect(series[1].feedKg).toBe(20);
+    expect(series[2].month).toBe('2026-11');
+    expect(series[2].feedKg).toBe(45);
+    expect(series[2].maggotKg).toBe(10);
+  });
+
+  test('mergeDailyChecklists merges per-task by newer updatedAt and prunes stale dates', () => {
+    const merged = mergeDailyChecklists(
+      {
+        '2026-11-23': { '1-nursery-h2': true, '1-move-h6': { done: true, updatedAt: 5000 } },
+        '2026-10-01': { 'old-task': { done: true, updatedAt: 100 } },
+      },
+      {
+        '2026-11-23': { '1-nursery-h2': { done: false, updatedAt: 2000 }, '1-move-h6': { done: false, updatedAt: 3000 } },
+      },
+      14,
+      '2026-11-23'
+    );
+    expect('2026-10-01' in merged).toBe(false);
+    expect(merged['2026-11-23']['1-nursery-h2'].done).toBe(false);
+    expect(merged['2026-11-23']['1-move-h6'].done).toBe(true);
   });
 });
